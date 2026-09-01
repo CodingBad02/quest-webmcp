@@ -1,0 +1,1511 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-09-01T23:46:58Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 428457212,
+  "lat": 12.9697383,
+  "lon": 77.6003775,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:country": "IN",
+    "addr:hamlet": "Shanthala Nagar",
+    "addr:housename": "Sophia's Choice",
+    "addr:postcode": "560001",
+    "addr:street": "Saint Mark's Road",
+    "amenity": "cafe",
+    "delivery": "yes",
+    "name": "Old Madras Baking Company",
+    "opening_hours": "08:00-23:00",
+    "operator": "Old Madras Baking Company",
+    "shop": "bakery",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 595411387,
+  "lat": 12.9751034,
+  "lon": 77.6028435,
+  "tags": {
+    "addr:housename": "The Museum",
+    "addr:street": "Museum Road",
+    "addr:suburb": "Shanthala Nagar",
+    "amenity": "cafe",
+    "name": "Temple of The Senses"
+  }
+},
+{
+  "type": "node",
+  "id": 661983020,
+  "lat": 12.9720317,
+  "lon": 77.6009309,
+  "tags": {
+    "addr:street": "Saint Mark's Road",
+    "amenity": "cafe",
+    "name": "Juice Junction",
+    "shop": "beverages"
+  }
+},
+{
+  "type": "node",
+  "id": 661983024,
+  "lat": 12.9735064,
+  "lon": 77.6012222,
+  "tags": {
+    "amenity": "toilets",
+    "fee": "3 INR",
+    "name": "Sulabh Complex",
+    "name:kn": "ಸುಲಭ್ ಶೌಚಾಲಯ"
+  }
+},
+{
+  "type": "node",
+  "id": 661983038,
+  "lat": 12.9751155,
+  "lon": 77.6014152,
+  "tags": {
+    "addr:street": "Saint Mark's Road",
+    "amenity": "cafe",
+    "name": "Bowring Stall"
+  }
+},
+{
+  "type": "node",
+  "id": 661983042,
+  "lat": 12.9762175,
+  "lon": 77.5993135,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Kotak Mahindra Bank",
+    "brand:wikidata": "Q2040404",
+    "brand:wikipedia": "en:Kotak Mahindra Bank",
+    "name": "Kotak Mahindra Bank",
+    "name:en": "Kotak Mahindra Bank",
+    "name:kn": "ಕೋಟಕ್ ಮಹಿಂದ್ರ ಬ್ಯಾಂಕ್",
+    "website": "https://www.kotak.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 661987296,
+  "lat": 12.9767675,
+  "lon": 77.5928470,
+  "tags": {
+    "access": "permissive",
+    "amenity": "toilets",
+    "check_date": "2026-01-17",
+    "fee": "yes",
+    "name": "Public Toilets",
+    "name:kn": "ಸಾರ್ವಜನಿಕ ಶೌಚಾಲಯ",
+    "toilets:disposal": "flush",
+    "unisex": "yes",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 663317713,
+  "lat": 12.9681567,
+  "lon": 77.5876645,
+  "tags": {
+    "amenity": "bank",
+    "brand": "Canara Bank",
+    "brand:en": "Canara Bank",
+    "brand:hi": "केनरा बैंक",
+    "brand:kn": "ಕೆನರಾ ಬ್ಯಾಂಕ್",
+    "brand:pa": "ਕੇਨਰਾ ਬੈਂਕ",
+    "brand:pnb": "کینرا بینک",
+    "brand:ur": "کینرا بینک",
+    "brand:wikidata": "Q2003777",
+    "brand:wikipedia": "en:Canara Bank",
+    "brand:wikipedia:pa": "ਕੇਨਰਾ ਬੈਂਕ",
+    "check_date": "2024-03-02",
+    "name": "Canara Bank",
+    "name:en": "Canara Bank",
+    "name:hi": "केनरा बैंक",
+    "name:kn": "ಕೆನರಾ ಬ್ಯಾಂಕ್",
+    "name:pa": "ਕੇਨਰਾ ਬੈਂਕ",
+    "name:pnb": "کینرا بینک",
+    "name:ur": "کینرا بینک",
+    "website": "https://www.canarabank.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 663317714,
+  "lat": 12.9681499,
+  "lon": 77.5880527,
+  "tags": {
+    "amenity": "bank",
+    "brand": "State Bank of India",
+    "brand:wikidata": "Q1340361",
+    "brand:wikipedia": "en:State Bank of India",
+    "name": "State Bank of India",
+    "name:kn": "ಎಸ್ ಬಿ ಐ",
+    "short_name": "SBI",
+    "website": "https://www.sbi.co.in"
+  }
+},
+{
+  "type": "node",
+  "id": 663568572,
+  "lat": 12.9717817,
+  "lon": 77.5942306,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Lavelle Road",
+    "amenity": "cafe",
+    "branch": "Square",
+    "brand": "Cafe Coffee Day",
+    "brand:wikidata": "Q5017235",
+    "check_date": "2024-08-19",
+    "cuisine": "coffee_shop",
+    "indoor_seating": "yes",
+    "internet_access": "wlan",
+    "name": "Cafe Coffee Day",
+    "name:kn": "ಕಫೆ ಕಾಫಿ ಡೇ",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 663573140,
+  "lat": 12.9751175,
+  "lon": 77.5976204,
+  "tags": {
+    "addr:street": "Kasturba Road",
+    "amenity": "bank",
+    "brand": "Dhanlaxmi Bank",
+    "brand:wikidata": "Q2040440",
+    "name": "Dhanlaxmi Bank"
+  }
+},
+{
+  "type": "node",
+  "id": 663592955,
+  "lat": 12.9756522,
+  "lon": 77.5973450,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Kasturba Road",
+    "amenity": "bank",
+    "brand": "Yes Bank",
+    "brand:wikidata": "Q2040394",
+    "brand:wikipedia": "en:Yes Bank",
+    "name": "Yes Bank",
+    "name:en": "YES Bank",
+    "name:kn": "ಯಸ್ ಬ್ಯಾಂಕ್",
+    "website": "https://www.yesbank.in"
+  }
+},
+{
+  "type": "node",
+  "id": 663599410,
+  "lat": 12.9723026,
+  "lon": 77.5863596,
+  "tags": {
+    "amenity": "bank",
+    "brand": "Corporation Bank",
+    "brand:wikidata": "Q2003387",
+    "brand:wikipedia": "en:Corporation Bank",
+    "name": "Corporation Bank",
+    "name:en": "Corporation Bank",
+    "name:kn": "ಕಾರ್ಪರೇಷನ್ ಬ್ಯಾಂಕ್",
+    "website": "https://corpbank.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 677286839,
+  "lat": 12.9706824,
+  "lon": 77.5996090,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Lavelle Road",
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "ICICI Bank",
+    "brand:wikidata": "Q1653258",
+    "name": "ICICI Bank",
+    "name:en": "ICICI Bank",
+    "name:kn": "ಐಸಿಐಸಿಐ ಬ್ಯಾಂಕು",
+    "short_name": "ICICI",
+    "website": "https://www.icicibank.com"
+  }
+},
+{
+  "type": "node",
+  "id": 677286841,
+  "lat": 12.9708631,
+  "lon": 77.6010396,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "branch": "Cantonment",
+    "brand": "Bank of India",
+    "brand:wikidata": "Q2004439",
+    "brand:wikipedia": "en:Bank of India",
+    "name": "Bank of India",
+    "name:en": "Bank of India",
+    "operator": "Bank of India",
+    "short_name": "BoI",
+    "website": "http://www.bankofindia.co.in"
+  }
+},
+{
+  "type": "node",
+  "id": 1446122916,
+  "lat": 12.9683152,
+  "lon": 77.6004368,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:full": "St. Marks Road, Opp Bishop Cotton Boys School, Srinivas Nagar, Shanthala Nagar, Ashok Nagar, Bengaluru",
+    "addr:housenumber": "74/5",
+    "addr:postcode": "560001",
+    "addr:street": "Saint Mark's Road",
+    "amenity": "pharmacy",
+    "dispensing": "yes",
+    "name": "The Cash Pharmacy",
+    "phone": "080 3361 8456"
+  }
+},
+{
+  "type": "node",
+  "id": 1449018888,
+  "lat": 12.9668907,
+  "lon": 77.5986274,
+  "tags": {
+    "amenity": "pharmacy",
+    "name": "Residency Pharmacy"
+  }
+},
+{
+  "type": "node",
+  "id": 1492519131,
+  "lat": 12.9719394,
+  "lon": 77.6004411,
+  "tags": {
+    "amenity": "community_centre",
+    "name": "Ashirwad"
+  }
+},
+{
+  "type": "node",
+  "id": 1492519137,
+  "lat": 12.9730431,
+  "lon": 77.6034656,
+  "tags": {
+    "amenity": "post_office",
+    "name": "India Post Museum Road",
+    "operator": "India Post",
+    "operator:wikidata": "Q3519720"
+  }
+},
+{
+  "type": "node",
+  "id": 1666861677,
+  "lat": 12.9668886,
+  "lon": 77.5993311,
+  "tags": {
+    "amenity": "bank",
+    "brand": "Bank of Baroda",
+    "brand:wikidata": "Q2003797",
+    "level": "1",
+    "name": "Bank of Baroda"
+  }
+},
+{
+  "type": "node",
+  "id": 1851707242,
+  "lat": 12.9655446,
+  "lon": 77.6011640,
+  "tags": {
+    "addr:city": "Bengaluru",
+    "addr:district": "Bengaluru Urban",
+    "addr:housenumber": "8/24",
+    "addr:postcode": "560025",
+    "addr:street": "Richmond Road",
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "HDFC Bank",
+    "brand:wikidata": "Q631047",
+    "brand:wikipedia": "en:HDFC Bank",
+    "name": "HDFC Bank",
+    "name:kn": "ಎಚ್ ಡಿ ಎಫ್ ಸಿ",
+    "short_name": "HDFC",
+    "website": "https://www.hdfcbank.com"
+  }
+},
+{
+  "type": "node",
+  "id": 2322736999,
+  "lat": 12.9684869,
+  "lon": 77.6008019,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "Sweet Chariot",
+    "delivery": "yes",
+    "level": "0",
+    "name": "Sweet Chariot",
+    "shop": "pastry",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 2722800863,
+  "lat": 12.9772393,
+  "lon": 77.5915221,
+  "tags": {
+    "amenity": "post_office",
+    "name": "High Court Post Office",
+    "name:kn": "ಹೈಕೋರ್ಟ್ ಅಂಚೇ ಕಛೇರಿ",
+    "operator": "India Post",
+    "operator:wikidata": "Q3519720"
+  }
+},
+{
+  "type": "node",
+  "id": 2774680147,
+  "lat": 12.9652714,
+  "lon": 77.5985205,
+  "tags": {
+    "addr:housename": "Ittiam",
+    "addr:street": "Richmond Road",
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "HDFC Bank",
+    "brand:wikidata": "Q631047",
+    "brand:wikipedia": "en:HDFC Bank",
+    "name": "HDFC Bank",
+    "name:kn": "ಎಚ್ ಡಿ ಎಫ್ ಸಿ",
+    "short_name": "HDFC",
+    "source": "www.hdfcbank.com",
+    "website": "https://www.hdfcbank.com"
+  }
+},
+{
+  "type": "node",
+  "id": 2872076318,
+  "lat": 12.9680121,
+  "lon": 77.5921023,
+  "tags": {
+    "amenity": "post_office",
+    "name": "Sampangi Rama Nagar Post Office",
+    "name:kn": "ಸಂಪಂಗಿರಾಮ ನಗರ ಆಂಚೆ ಕಛೇರಿ",
+    "operator": "India Post",
+    "operator:wikidata": "Q3519720"
+  }
+},
+{
+  "type": "node",
+  "id": 3019535004,
+  "lat": 12.9659456,
+  "lon": 77.5924964,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:postcode": "560027",
+    "addr:street": "Chidananda Maharashi Ashram Road",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "internet_access": "no",
+    "name": "Chamundeshwari Coffee",
+    "name:kn": "ಚಾಮುಂಡೇಶ್ವರಿ ಕಾಫಿ",
+    "opening_hours": "05:00-19:30",
+    "smoking": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 3019539252,
+  "lat": 12.9664142,
+  "lon": 77.5925401,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:postcode": "560027",
+    "addr:street": "Chidananda Maharashi Ashram Road",
+    "amenity": "pharmacy",
+    "brand": "Apollo Pharmacy",
+    "brand:wikidata": "Q62562612",
+    "healthcare": "pharmacy",
+    "name": "Apollo Pharmacy",
+    "name:kn": "ಅಪೋಲೋ ಫಾರ್ಮಸಿ"
+  }
+},
+{
+  "type": "node",
+  "id": 3019541639,
+  "lat": 12.9668083,
+  "lon": 77.5926470,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:postcode": "560027",
+    "addr:street": "Chidananda Maharashi Ashram Road",
+    "amenity": "pharmacy",
+    "name": "Manjula Medicals"
+  }
+},
+{
+  "type": "node",
+  "id": 3237635590,
+  "lat": 12.9672272,
+  "lon": 77.5871401,
+  "tags": {
+    "amenity": "bank",
+    "brand": "Punjab National Bank",
+    "brand:wikidata": "Q2743499",
+    "name": "Punjab National Bank",
+    "name:en": "Punjab National Bank",
+    "name:kn": "ಪಂಜಾಬ ರಾಷ್ಟ್ರೀಯ ಬ್ಯಾಂಕ್",
+    "short_name": "PNB",
+    "website": "https://www.pnbindia.in"
+  }
+},
+{
+  "type": "node",
+  "id": 3406380502,
+  "lat": 12.9671590,
+  "lon": 77.5891728,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Punjab National Bank",
+    "brand:wikidata": "Q2743499",
+    "ele": "1",
+    "name": "Punjab National Bank",
+    "name:en": "Punjab National Bank",
+    "name:kn": "ಪಂಜಾಬ ರಾಷ್ಟ್ರೀಯ ಬ್ಯಾಂಕ್",
+    "operator": "Punjab National Bank",
+    "short_name": "PNB",
+    "website": "https://www.pnbindia.in"
+  }
+},
+{
+  "type": "node",
+  "id": 3761261084,
+  "lat": 12.9769309,
+  "lon": 77.5885998,
+  "tags": {
+    "amenity": "post_office",
+    "name": "India Post",
+    "name:kn": "ಅಂಚೆ ಕಛೇರಿ",
+    "operator": "India Post",
+    "operator:wikidata": "Q3519720"
+  }
+},
+{
+  "type": "node",
+  "id": 3761261085,
+  "lat": 12.9775007,
+  "lon": 77.5883584,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Syndicate Bank",
+    "brand:wikidata": "Q2004088",
+    "level": "-1",
+    "name": "Syndicate Bank",
+    "name:en": "Syndicate Bank",
+    "name:kn": "ಸಿಂಡಿಕೇಟ್ ಬ್ಯಾಂಕ್",
+    "website": "https://www.syndicatebank.in"
+  }
+},
+{
+  "type": "node",
+  "id": 3862107357,
+  "lat": 12.9677866,
+  "lon": 77.6002508,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "ICICI Bank",
+    "brand:wikidata": "Q1653258",
+    "name": "ICICI Bank",
+    "short_name": "ICICI"
+  }
+},
+{
+  "type": "node",
+  "id": 3862137594,
+  "lat": 12.9674907,
+  "lon": 77.5998658,
+  "tags": {
+    "amenity": "clinic",
+    "level": "1",
+    "name": "National Medical Center"
+  }
+},
+{
+  "type": "node",
+  "id": 3862550432,
+  "lat": 12.9647271,
+  "lon": 77.5964702,
+  "tags": {
+    "amenity": "clinic",
+    "level": "2",
+    "name": "Dr. Patel's Homeopathy Clinic"
+  }
+},
+{
+  "type": "node",
+  "id": 3862569635,
+  "lat": 12.9668801,
+  "lon": 77.5992780,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Indian Overseas Bank",
+    "brand:wikidata": "Q2003611",
+    "brand:wikipedia": "en:Indian Overseas Bank",
+    "level": "0",
+    "name": "Indian Overseas Bank",
+    "name:en": "Indian Overseas Bank",
+    "name:kn": "ಐ ಓ ಬಿ",
+    "short_name": "IOB",
+    "website": "https://www.iob.in"
+  }
+},
+{
+  "type": "node",
+  "id": 3862572029,
+  "lat": 12.9674186,
+  "lon": 77.5997528,
+  "tags": {
+    "amenity": "pharmacy",
+    "healthcare": "pharmacy",
+    "level": "0",
+    "name": "Balaji Pharma"
+  }
+},
+{
+  "type": "node",
+  "id": 3862572657,
+  "lat": 12.9678054,
+  "lon": 77.6002865,
+  "tags": {
+    "amenity": "pharmacy",
+    "level": "-1",
+    "name": "Chetak Pharmacy"
+  }
+},
+{
+  "type": "node",
+  "id": 4307677591,
+  "lat": 12.9683737,
+  "lon": 77.5948809,
+  "tags": {
+    "amenity": "pharmacy",
+    "name": "Green Apple"
+  }
+},
+{
+  "type": "node",
+  "id": 4446360304,
+  "lat": 12.9762816,
+  "lon": 77.5991019,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:housenumber": "32",
+    "addr:postcode": "560001",
+    "addr:street": "Quadrant Road, Shivaji Nagar, Near Taj Hotel, Shanthala Nagar, Ashok Nagar",
+    "amenity": "pharmacy",
+    "healthcare": "pharmacy",
+    "name": "Nathans Vet Pharma Centre",
+    "phone": "080 2286 1740"
+  }
+},
+{
+  "type": "node",
+  "id": 4446442047,
+  "lat": 12.9658632,
+  "lon": 77.5998808,
+  "tags": {
+    "addr:city": "Bengaluru",
+    "addr:housenumber": "5/1",
+    "addr:postcode": "560025",
+    "addr:street": "2nd Floor, Rich Homes, Richmond Road, Shanthala Nagar, Ashok Nagar, Shanthala Nagar, Ashok Nagar",
+    "amenity": "pharmacy",
+    "name": "Bangalore Fetal Medicine Centre",
+    "phone": "080 2221 0540",
+    "website": "bangalorefetalmedicine.com"
+  }
+},
+{
+  "type": "node",
+  "id": 4446962739,
+  "lat": 12.9644242,
+  "lon": 77.5968789,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:postcode": "560025",
+    "addr:street": "Lalbagh Road",
+    "amenity": "pharmacy",
+    "healthcare": "pharmacy",
+    "name": "Central Lab",
+    "phone": "+9180 222 37370"
+  }
+},
+{
+  "type": "node",
+  "id": 4847287229,
+  "lat": 12.9707944,
+  "lon": 77.6007269,
+  "tags": {
+    "amenity": "bank",
+    "branch": "Saint Mark's Road",
+    "brand": "Federal Bank",
+    "brand:wikidata": "Q2044983",
+    "brand:wikipedia": "en:Federal Bank",
+    "name": "Federal Bank",
+    "name:en": "Federal Bank",
+    "name:kn": "ಫೆಡೆರಲ್ ಬ್ಯಾಂಕ್",
+    "website": "https://www.federalbank.co.in",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 4847297822,
+  "lat": 12.9683717,
+  "lon": 77.6016294,
+  "tags": {
+    "alt_name": "RBL Bank Limited",
+    "amenity": "bank",
+    "brand": "RBL Bank",
+    "brand:wikidata": "Q13120398",
+    "brand:wikipedia": "en:RBL Bank",
+    "name": "RBL Bank",
+    "name:en": "RBL Bank",
+    "old_name": "Ratnakar Bank Limited",
+    "short_name": "RBL",
+    "website": "https://www.rblbank.com"
+  }
+},
+{
+  "type": "node",
+  "id": 5765878304,
+  "lat": 12.9649875,
+  "lon": 77.5996327,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Punjab National Bank",
+    "brand:wikidata": "Q2743499",
+    "name": "Punjab National Bank"
+  }
+},
+{
+  "type": "node",
+  "id": 7576958055,
+  "lat": 12.9626783,
+  "lon": 77.5949614,
+  "tags": {
+    "addr:district": "Bengaluru Urban",
+    "addr:full": "Sampangi Rama Nagar, Bengaluru",
+    "addr:postcode": "560027",
+    "addr:state": "Karnataka",
+    "amenity": "clinic",
+    "name": "Dr. Shankar Desai Clinic",
+    "source": "Local Knowledge"
+  }
+},
+{
+  "type": "node",
+  "id": 7576958088,
+  "lat": 12.9648335,
+  "lon": 77.5944973,
+  "tags": {
+    "addr:district": "Bengaluru Urban",
+    "addr:full": "Sampangi Rama Nagar, Bengaluru",
+    "addr:postcode": "560027",
+    "addr:state": "Karnataka",
+    "amenity": "clinic",
+    "name": "Woodlands Clinic",
+    "source": "Local Knowledge"
+  }
+},
+{
+  "type": "node",
+  "id": 7576958094,
+  "lat": 12.9638998,
+  "lon": 77.5983282,
+  "tags": {
+    "addr:district": "Bengaluru Urban",
+    "addr:full": "Langford Gardens, Bengaluru",
+    "addr:postcode": "560025",
+    "addr:state": "Karnataka",
+    "amenity": "clinic",
+    "name": "Daksh Eye Care Centre",
+    "source": "Local Knowledge"
+  }
+},
+{
+  "type": "node",
+  "id": 7576958110,
+  "lat": 12.9666740,
+  "lon": 77.5919520,
+  "tags": {
+    "addr:district": "Bengaluru Urban",
+    "addr:full": "Ashwath Nagar, Sampangi Rama Nagara",
+    "addr:postcode": "560027",
+    "addr:state": "Karnataka",
+    "amenity": "clinic",
+    "name": "Malika Clinic",
+    "source": "Local Knowledge"
+  }
+},
+{
+  "type": "node",
+  "id": 9103464454,
+  "lat": 12.9722290,
+  "lon": 77.5935562,
+  "tags": {
+    "access": "permissive",
+    "amenity": "toilets",
+    "fee": "yes",
+    "name": "Public Toilets",
+    "name:kn": "ಸಾರ್ವಜನಿಕ ಶೌಚಾಲಯ",
+    "toilets:disposal": "flush",
+    "unisex": "yes",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 9142142898,
+  "lat": 12.9682273,
+  "lon": 77.5885244,
+  "tags": {
+    "access": "permissive",
+    "amenity": "toilets",
+    "name": "Public Toilets",
+    "name:kn": "ಸಾರ್ವಜನಿಕ ಶೌಚಾಲಯ",
+    "toilets:disposal": "flush",
+    "unisex": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 9381352866,
+  "lat": 12.9737225,
+  "lon": 77.6032468,
+  "tags": {
+    "air_conditioning": "yes",
+    "amenity": "cafe",
+    "check_date": "2025-04-12",
+    "cuisine": "pastry;coffee_shop;tea;cake",
+    "delivery": "yes",
+    "level": "0;1",
+    "name": "Amintri Cafe and Pastries",
+    "outdoor_seating": "yes",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "payment:debit_cards": "yes",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 9532858987,
+  "lat": 12.9711900,
+  "lon": 77.5982058,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Lavelle Road",
+    "amenity": "cafe",
+    "brand": "Starbucks",
+    "brand:wikidata": "Q37158",
+    "building": "yes",
+    "check_date": "2025-01-31",
+    "cuisine": "coffee_shop",
+    "internet_access": "wlan",
+    "name": "Starbucks",
+    "official_name": "Starbucks Coffee",
+    "smoking": "outside",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 9532858988,
+  "lat": 12.9712972,
+  "lon": 77.5975701,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "Theobroma",
+    "brand:wikidata": "Q124374469",
+    "check_date": "2025-01-31",
+    "delivery": "yes",
+    "name": "Theobroma",
+    "shop": "pastry",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 9532858990,
+  "lat": 12.9689056,
+  "lon": 77.6002859,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Karnataka Bank",
+    "brand:wikidata": "Q2042632",
+    "name": "Karnataka Bank",
+    "operator": "Karnataka Bank"
+  }
+},
+{
+  "type": "node",
+  "id": 9532858994,
+  "lat": 12.9695074,
+  "lon": 77.6003515,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Lavonne Cafe"
+  }
+},
+{
+  "type": "node",
+  "id": 9540035598,
+  "lat": 12.9707980,
+  "lon": 77.5973193,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Canara Bank",
+    "brand:en": "Canara Bank",
+    "brand:hi": "केनरा बैंक",
+    "brand:kn": "ಕೆನರಾ ಬ್ಯಾಂಕ್",
+    "brand:pa": "ਕੇਨਰਾ ਬੈਂਕ",
+    "brand:pnb": "کینرا بینک",
+    "brand:ur": "کینرا بینک",
+    "brand:wikidata": "Q2003777",
+    "name": "Canara Bank",
+    "name:en": "Canara Bank",
+    "name:hi": "केनरा बैंक",
+    "name:kn": "ಕೆನರಾ ಬ್ಯಾಂಕ್",
+    "name:pa": "ਕੇਨਰਾ ਬੈਂਕ",
+    "name:pnb": "کینرا بینک",
+    "name:ur": "کینرا بینک",
+    "operator": "Canara Bank"
+  }
+},
+{
+  "type": "node",
+  "id": 9738943447,
+  "lat": 12.9682920,
+  "lon": 77.6027535,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Ground Up Coffee",
+    "shop": "coffee"
+  }
+},
+{
+  "type": "node",
+  "id": 9828605792,
+  "lat": 12.9760006,
+  "lon": 77.6026140,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Zed The Baker",
+    "shop": "bakery"
+  }
+},
+{
+  "type": "node",
+  "id": 10009475817,
+  "lat": 12.9688078,
+  "lon": 77.6013703,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Fuga"
+  }
+},
+{
+  "type": "node",
+  "id": 10051816956,
+  "lat": 12.9688477,
+  "lon": 77.6002752,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Delistic",
+    "shop": "chocolate",
+    "website": "https://www.delistic.in/"
+  }
+},
+{
+  "type": "node",
+  "id": 10236025482,
+  "lat": 12.9697890,
+  "lon": 77.5974038,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "Glen's Bakehouse",
+    "check_date": "2024-08-19",
+    "delivery": "yes",
+    "name": "Glen's Bakehouse",
+    "shop": "pastry",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 10272932180,
+  "lat": 12.9720878,
+  "lon": 77.6009403,
+  "tags": {
+    "amenity": "pharmacy",
+    "name": "Forster Pharma"
+  }
+},
+{
+  "type": "node",
+  "id": 10286307780,
+  "lat": 12.9673295,
+  "lon": 77.5975661,
+  "tags": {
+    "access": "permissive",
+    "amenity": "library",
+    "name": "Bangalore Club Library"
+  }
+},
+{
+  "type": "node",
+  "id": 10286307781,
+  "lat": 12.9743213,
+  "lon": 77.6004186,
+  "tags": {
+    "access": "permissive",
+    "amenity": "library",
+    "name": "Bowring Institute Library"
+  }
+},
+{
+  "type": "node",
+  "id": 10731156961,
+  "lat": 12.9749590,
+  "lon": 77.5995630,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2024-08-19",
+    "name": "O'ver Coffee"
+  }
+},
+{
+  "type": "node",
+  "id": 10753340362,
+  "lat": 12.9745369,
+  "lon": 77.5968251,
+  "tags": {
+    "amenity": "library",
+    "name": "MAP Library"
+  }
+},
+{
+  "type": "node",
+  "id": 10753340367,
+  "lat": 12.9746415,
+  "lon": 77.5967427,
+  "tags": {
+    "amenity": "cafe",
+    "indoor_seating": "yes",
+    "name": "MAP Cafe",
+    "outdoor_seating": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 10833870879,
+  "lat": 12.9675882,
+  "lon": 77.5900894,
+  "tags": {
+    "amenity": "community_centre",
+    "name": "BBMP Employees Co-Operative Society"
+  }
+},
+{
+  "type": "node",
+  "id": 11035521590,
+  "lat": 12.9757608,
+  "lon": 77.6024073,
+  "tags": {
+    "addr:housenumber": "46",
+    "addr:street": "Church Street",
+    "amenity": "cafe",
+    "check_date": "2025-02-15",
+    "contact:instagram": "https://www.instagram.com/thecaffeinebaar",
+    "cuisine": "coffee_shop",
+    "delivery": "yes",
+    "internet_access": "wlan",
+    "internet_access:fee": "customers",
+    "name": "The Caffeine Baar",
+    "opening_hours": "08:00-23:00",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "toilets": "yes",
+    "website": "https://thecaffeinebaar.com",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 11215576568,
+  "lat": 12.9751851,
+  "lon": 77.6028219,
+  "tags": {
+    "addr:housename": "The Museum",
+    "addr:street": "Museum Road",
+    "addr:suburb": "Shanthala Nagar",
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "IndusInd Bank",
+    "brand:wikidata": "Q2040323",
+    "name": "IndusInd Bank"
+  }
+},
+{
+  "type": "node",
+  "id": 11356383315,
+  "lat": 12.9760718,
+  "lon": 77.6026100,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Lime Light"
+  }
+},
+{
+  "type": "node",
+  "id": 11356383323,
+  "lat": 12.9728720,
+  "lon": 77.6002751,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Smoor"
+  }
+},
+{
+  "type": "node",
+  "id": 11476370291,
+  "lat": 12.9653142,
+  "lon": 77.5953153,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Yes Bank",
+    "brand:wikidata": "Q2040394",
+    "name": "Yes Bank",
+    "name:kn": "ಯಸ್ ಬ್ಯಾಂಕ್"
+  }
+},
+{
+  "type": "node",
+  "id": 11665637081,
+  "lat": 12.9643591,
+  "lon": 77.5968522,
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "Indian Bank",
+    "brand:wikidata": "Q2003789",
+    "name": "Indian Bank",
+    "name:kn": "ಇಂಡಿಯನ್ ಬ್ಯಾಂಕ್"
+  }
+},
+{
+  "type": "node",
+  "id": 11665637083,
+  "lat": 12.9646453,
+  "lon": 77.5972867,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:district": "Bengaluru Urban",
+    "addr:housenumber": "105, Globe House",
+    "addr:postcode": "560025",
+    "addr:street": "Richmond Road",
+    "amenity": "bank",
+    "level": "2",
+    "name": "IDBI Capital"
+  }
+},
+{
+  "type": "node",
+  "id": 11975333361,
+  "lat": 12.9659664,
+  "lon": 77.5987275,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Ithaca"
+  }
+},
+{
+  "type": "node",
+  "id": 12051506508,
+  "lat": 12.9674667,
+  "lon": 77.5999201,
+  "tags": {
+    "addr:street": "Residency Road",
+    "amenity": "cafe",
+    "name": "Ramji Chaiwale"
+  }
+},
+{
+  "type": "node",
+  "id": 12117975284,
+  "lat": 12.9759215,
+  "lon": 77.6026191,
+  "tags": {
+    "amenity": "bank",
+    "brand": "Union Bank of India",
+    "brand:wikidata": "Q2004078",
+    "check_date": "2024-08-18",
+    "name": "Union Bank of India"
+  }
+},
+{
+  "type": "node",
+  "id": 12119590183,
+  "lat": 12.9717772,
+  "lon": 77.5958246,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2024-08-19",
+    "name": "Third Wave Coffee"
+  }
+},
+{
+  "type": "node",
+  "id": 12461000328,
+  "lat": 12.9717440,
+  "lon": 77.5943973,
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:floor": "G",
+    "addr:street": "Vittal Mallya Road",
+    "addr:suburb": "Shanthala Nagar",
+    "air_conditioning": "yes",
+    "amenity": "cafe",
+    "brand": "Blue Tokai Coffee Roasters",
+    "brand:wikidata": "Q137711807",
+    "check_date": "2025-01-23",
+    "contact:facebook": "bluetokaicoffee",
+    "contact:instagram": "bluetokaicoffee",
+    "contact:twitter": "bluetokaicoffee",
+    "cuisine": "coffee_shop",
+    "delivery": "yes",
+    "internet_access": "wlan",
+    "level": "0",
+    "name": "Blue Tokai Coffee Roasters",
+    "takeaway": "yes",
+    "toilets": "yes",
+    "website": "https://bluetokaicoffee.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 12475698450,
+  "lat": 12.9734621,
+  "lon": 77.6019267,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2025-01-23",
+    "name": "Magnolia Bakery",
+    "payment:cash": "yes",
+    "payment:mastercard": "yes",
+    "payment:visa": "yes",
+    "shop": "bakery"
+  }
+},
+{
+  "type": "node",
+  "id": 12492736878,
+  "lat": 12.9753903,
+  "lon": 77.6028460,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2025-02-15",
+    "name": "Atty's Express Cafe"
+  }
+},
+{
+  "type": "node",
+  "id": 12526376818,
+  "lat": 12.9705248,
+  "lon": 77.5995858,
+  "tags": {
+    "amenity": "bank",
+    "brand": "ICICI Bank",
+    "brand:wikidata": "Q1653258",
+    "name": "ICICI Bank",
+    "short_name": "ICICI"
+  }
+},
+{
+  "type": "node",
+  "id": 12538080968,
+  "lat": 12.9669795,
+  "lon": 77.5868791,
+  "tags": {
+    "addr:city": "Bengaluru",
+    "addr:postcode": "560002",
+    "addr:street": "Cubbon Pet Main Road, Halsurpete, Nagartapete",
+    "amenity": "bank",
+    "brand": "State Bank of India",
+    "brand:wikidata": "Q1340361",
+    "name": "State Bank of India",
+    "short_name": "SBI"
+  }
+},
+{
+  "type": "node",
+  "id": 13013958065,
+  "lat": 12.9685475,
+  "lon": 77.5964624,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Isobel Coffee House"
+  }
+},
+{
+  "type": "node",
+  "id": 13256101495,
+  "lat": 12.9753941,
+  "lon": 77.6024211,
+  "tags": {
+    "addr:city": "Bengaluru",
+    "addr:housename": "1 Sobha",
+    "addr:postcode": "560001",
+    "addr:street": "Church Street",
+    "amenity": "cafe",
+    "check_date": "2025-10-25",
+    "contact:instagram": "maverickandfarmer",
+    "cuisine": "coffee_shop",
+    "delivery": "yes",
+    "internet_access": "yes",
+    "name": "Maverick and Farmer Coffee",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "toilets": "yes",
+    "website": "https://www.maverickandfarmer.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 13288585566,
+  "lat": 12.9687750,
+  "lon": 77.6026099,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2026-05-22",
+    "contact:instagram": "purpose.matcha",
+    "cuisine": "coffee_shop",
+    "name": "Purpose Matcha and Coffee House"
+  }
+},
+{
+  "type": "node",
+  "id": 13824117220,
+  "lat": 12.9705043,
+  "lon": 77.5978029,
+  "tags": {
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "name": "Dolci"
+  }
+},
+{
+  "type": "node",
+  "id": 13824117221,
+  "lat": 12.9706522,
+  "lon": 77.5978108,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Hatti Kappi Signature"
+  }
+},
+{
+  "type": "way",
+  "id": 52032473,
+  "center": {
+    "lat": 12.9743468,
+    "lon": 77.5905724
+  },
+  "tags": {
+    "alt_name": "Sheshadri Iyer Memorial Hall",
+    "amenity": "library",
+    "building": "public",
+    "building:colour": "#e14327",
+    "building:part": "yes",
+    "height": "10",
+    "heritage": "2",
+    "heritage:operator": "nmma",
+    "heritage:website": "https://nmma.nic.in/nmma/exploreBuiltState.do?state=29",
+    "name": "State Central Library",
+    "name:kn": "ರಾಜ್ಯ ಕೇಂದ್ರ ಗ್ರಂಥಾಲಯ",
+    "official_name": "Sheshadri Memorial Hall",
+    "opening_hours": "Tu-Su 8:30-19:30",
+    "ref:nmma": "KR20010696",
+    "roof:colour": "#9a9896",
+    "start_date": "1905",
+    "survey:date": "2023-09-15"
+  }
+},
+{
+  "type": "way",
+  "id": 52059624,
+  "center": {
+    "lat": 12.9755510,
+    "lon": 77.5896005
+  },
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Cubbon Park Road",
+    "amenity": "library",
+    "building": "yes",
+    "name": "Indira Priyadarshini Children's Library"
+  }
+},
+{
+  "type": "way",
+  "id": 52060141,
+  "center": {
+    "lat": 12.9733955,
+    "lon": 77.5955623
+  },
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:housename": "HDFC House",
+    "addr:housenumber": "24/3, 51",
+    "addr:postcode": "560001",
+    "addr:street": "Kasturba Road",
+    "amenity": "bank",
+    "atm": "yes",
+    "branch": "Ltd",
+    "brand": "HDFC Bank",
+    "brand:wikidata": "Q631047",
+    "building": "office",
+    "building:levels": "5",
+    "building:material": "granite",
+    "name": "HDFC Bank",
+    "name:kn": "ಎಚ್ ಡಿ ಎಫ್ ಸಿ",
+    "short_name": "HDFC",
+    "source": "www.hdfcbank.com"
+  }
+},
+{
+  "type": "way",
+  "id": 115837335,
+  "center": {
+    "lat": 12.9668142,
+    "lon": 77.5974558
+  },
+  "tags": {
+    "addr:city": "Bengaluru",
+    "addr:country": "IN",
+    "addr:housenumber": "10",
+    "addr:postcode": "560025",
+    "addr:street": "Residency Road",
+    "addr:suburb": "Shanthala Nagar",
+    "amenity": "community_centre",
+    "club": "social",
+    "community_centre": "club_home",
+    "heritage": "2",
+    "heritage:operator": "nmma",
+    "heritage:website": "https://nmma.nic.in/nmma/exploreBuiltState.do?state=29",
+    "leisure": "sports_centre",
+    "name": "Bangalore Club",
+    "name:kn": "ಬೆಂಗಳೂರು ಕ್ಲಬ್",
+    "old_name": "Bangalore United Services Club",
+    "ref:nmma": "KR20010316",
+    "start_date": "1868",
+    "website": "https://www.bangaloreclub.com/",
+    "wikidata": "Q4855040",
+    "wikipedia": "en:Bangalore Club"
+  }
+},
+{
+  "type": "way",
+  "id": 352714475,
+  "center": {
+    "lat": 12.9724941,
+    "lon": 77.5859928
+  },
+  "tags": {
+    "amenity": "library",
+    "building": "yes",
+    "name": "Mythic Society Library"
+  }
+},
+{
+  "type": "way",
+  "id": 474654132,
+  "center": {
+    "lat": 12.9714678,
+    "lon": 77.5978865
+  },
+  "tags": {
+    "addr:city": "Bangalore",
+    "addr:street": "Lavelle Road",
+    "air_conditioning": "yes",
+    "amenity": "cafe",
+    "brand": "Third Wave Coffee",
+    "building": "commercial",
+    "check_date": "2025-01-31",
+    "cuisine": "coffee_shop",
+    "internet_access": "wlan",
+    "name": "Third Wave Coffee",
+    "outdoor_seating": "yes",
+    "smoking": "outside",
+    "takeaway": "yes",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 1066870634,
+  "center": {
+    "lat": 12.9719916,
+    "lon": 77.6004921
+  },
+  "tags": {
+    "amenity": "community_centre",
+    "landuse": "commercial",
+    "name": "Ashirwad",
+    "name:kn": "ಆಶೀರ್ವಾದ"
+  }
+},
+{
+  "type": "relation",
+  "id": 4602221,
+  "center": {
+    "lat": 12.9724292,
+    "lon": 77.6016850
+  },
+  "tags": {
+    "amenity": "bank",
+    "atm": "yes",
+    "brand": "State Bank of India",
+    "brand:wikidata": "Q1340361",
+    "brand:wikipedia": "en:State Bank of India",
+    "building": "yes",
+    "name": "State Bank of India",
+    "name:en": "State Bank of India",
+    "name:kn": "ಭಾರತೀಯ ಸ್ಟೇಟ್ ಬ್ಯಾಂಕ್",
+    "short_name": "SBI",
+    "type": "multipolygon"
+  }
+}
+
+  ]
+}
