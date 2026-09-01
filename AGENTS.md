@@ -20,7 +20,7 @@
 WebMCP micro-volunteering app. Deadline 2026-09-03 13:00 PDT. Read `SPEC.md` Part A5 first. Those decisions override everything else.
 
 - Agent does logistics. Human does the work. No tool performs the volunteer's task.
-- Four tools only: `find-quests`, `check-contribution`, `submit-contribution`, `approve-contribution`.
+- Five tools only: `find-quests`, `open-quest`, `check-contribution`, `submit-contribution`, `approve-contribution`. `open-quest` exists so the agent can move the volunteer into a workspace without a click. Do not add a sixth.
 - Use `document.modelContext`. Never `navigator.modelContext`.
 - Tool output is text under 1,500 characters. Descriptions under 500. Names under 30.
 - Every tool is a thin wrapper over a shared function the UI also calls.

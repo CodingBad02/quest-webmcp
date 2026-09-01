@@ -27,7 +27,7 @@ export default function App() {
       const s = getState();
       if (e.type === 'contribution:approved' && s.role === 'volunteer') {
         const c = s.contributions.find((x) => x.id === e.contributionId);
-        toast(`${c?.volunteerName ?? 'Your'} work on ${c?.questTitle.replace(/^.*?: /, '') ?? 'a quest'} was approved by ${e.reviewerName}. A star lit up.`);
+        toast(`${e.reviewerName} approved your work on ${c?.questTitle.replace(/^.*?: /, '') ?? 'a quest'}. A star lit up.`);
         if (s.activeQuestId === e.questId) setState({ workspace: 'approved' });
       }
       if (e.type === 'contribution:rejected' && s.role === 'volunteer') {
