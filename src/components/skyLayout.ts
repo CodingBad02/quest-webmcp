@@ -5,7 +5,6 @@
  * central Bengaluru into a shared frame, so the two Bengaluru campaigns are recognisably the same
  * streets. Each campaign gets its own panel across the width of the sky; without panels the
  * `hours` and `access` stars for one OSM element would sit on the same pixel.
- * The rewrite campaign has no coordinates and gets a small seeded cluster in its own panel.
  */
 import type { Campaign, Contribution, Quest, QuestType } from '../types';
 
@@ -28,7 +27,7 @@ export interface StarNode {
   v: number;
   /** depth jitter, -1..1 (negative is farther). placeStars scales it to world px per mode; the SVG fallback ignores it. */
   z: number;
-  /** true when the quest has real coordinates (the Bengaluru panels); false for the seeded rewrite cluster */
+  /** true when the quest has real coordinates */
   placed: boolean;
   /** stable 0..1 per star, drives twinkle phase and size */
   seed: number;
@@ -56,7 +55,6 @@ export interface PlacedLayout {
 export const GAP_TEXT: Record<QuestType, string> = {
   'access-photo': 'no wheelchair tag',
   'verify-hours': 'no opening hours',
-  'plain-rewrite': 'needs plain words',
 };
 
 export function rng(seed: string) {
@@ -106,16 +104,11 @@ export function buildSkyModel(campaigns: Campaign[], quests: Quest[]): SkyModel 
       if (!q) continue;
       const r = rng(id);
       const seed = r();
-      let u: number, v: number;
-      if (q.lat != null && q.lon != null) {
-        u = ((q.lon - CENTER.lon) * cosLat - minX) / spanX;
-        v = (q.lat - CENTER.lat - minY) / spanY;
-      } else {
-        // Deterministic small cluster for quests with no place on the map.
-        u = 0.22 + r() * 0.56;
-        v = 0.18 + r() * 0.64;
-      }
       const hasPlace = q.lat != null && q.lon != null;
+      // Every P0 adapter (OSM) returns real coordinates; a quest without one would have nowhere
+      // honest to sit, so it renders at the panel's centre rather than a fabricated position.
+      const u = hasPlace ? ((q.lon! - CENTER.lon) * cosLat - minX) / spanX : 0.5;
+      const v = hasPlace ? (q.lat! - CENTER.lat - minY) / spanY : 0.5;
       const z = r() * 2 - 1;
       stars.push({ questId: id, campaignId: c.id, placeName: q.placeName, gap: GAP_TEXT[q.type], u, v, z, placed: hasPlace, seed });
       local.push({ u, v });
@@ -129,9 +122,10 @@ export function buildSkyModel(campaigns: Campaign[], quests: Quest[]): SkyModel 
 /** Horizontal page gutter, mirrors the CSS `max(24px, calc((100vw - 1200px) / 2))`. */
 export function gutterFor(w: number) { return w <= 900 ? 16 : Math.max(24, (w - 1200) / 2); }
 
-/** Vertical band the stars may occupy: the hero leaves the upper sky for the headline, both leave room for the legend. */
+/** Vertical band the stars may occupy: the hero leaves the upper sky for the headline, both leave
+ *  room for the legend — the hero reserves more since v2 stacks the state key above it (§4, §8). */
 export function starBand(mode: SkyMode, h: number): { top: number; bottom: number } {
-  if (mode === 'hero') return { top: Math.max(h * 0.46, 200), bottom: h - 64 };
+  if (mode === 'hero') return { top: Math.max(h * 0.46, 200), bottom: h - 96 };
   return { top: 16, bottom: h - 40 };
 }
 
@@ -152,6 +146,10 @@ export function placeStars(model: SkyModel, w: number, h: number, mode: SkyMode)
   return { stars, edges: model.edges, panels };
 }
 
+// TODO(DESIGN.md §8): the sky is still a binary lit/unlit grammar keyed off `approved`. v2 adds a
+// third truth — `approved` (reviewed, outlined ring) vs `landed` (source accepted, filled + glow)
+// are different facts and must not render the same. `landed` has no producer yet (P1 write-back),
+// so this stays a two-state map until skyScene.ts and Constellation.tsx grow a second lit tier.
 export function litMap(contributions: Contribution[]) {
   return new Map(contributions.filter((c) => c.status === 'approved').map((c) => [c.questId, c]));
 }

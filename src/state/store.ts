@@ -63,8 +63,7 @@ export function reloadShared() {
 
 export function emptyDraft(type: QuestType): ContributionPayload {
   if (type === 'verify-hours') return { kind: 'verify-hours', openingHours: '', verifiedBy: '', note: '' };
-  if (type === 'access-photo') return { kind: 'access-photo', imageDataUrl: '', wheelchair: '', note: '' };
-  return { kind: 'plain-rewrite', rewrittenText: '' };
+  return { kind: 'access-photo', imageDataUrl: '', wheelchair: '', note: '' };
 }
 
 export function openQuest(questId: string) {

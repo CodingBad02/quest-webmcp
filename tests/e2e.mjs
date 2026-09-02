@@ -18,7 +18,7 @@ const call = (page, name, args = {}) => page.evaluate(async ([name, args]) => {
   const r = await document.modelContext.executeTool(t, JSON.stringify(args));
   return JSON.parse(r).content[0].text;
 }, [name, args]);
-const rackNames = (page) => page.$$eval('.rack-list .tool:not(.tool-locked):not(.tool-removing):not(.tool-empty) .tool-name', (els) => els.map((e) => e.textContent).sort());
+const rackNames = (page) => page.$$eval('.qt-rack-list .qt-tool:not([data-state="locked"]):not([data-state="removing"]) .qt-tool-name', (els) => els.map((e) => e.textContent).sort());
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-features=WebMCP'] });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
@@ -58,7 +58,7 @@ await vol.fill('#oh', 'Mo-Sa 09:00-21:00; Su 10:00-18:00');
 await vol.selectOption('#vb', 'phone');
 await vol.fill('#note', 'Called at 4 pm. Manager confirmed. Closed second Saturday.');
 const ready = await call(vol, 'check-contribution');
-await vol.waitForSelector('.tool-name:text("submit-contribution")');
+await vol.waitForSelector('.qt-tool-name:text("submit-contribution")');
 names = await toolNames(vol);
 check('6. check passes and submit-contribution appears', ready.startsWith('Ready') && names.includes('submit-contribution'), names.join(','));
 await vol.waitForTimeout(700);
@@ -66,12 +66,12 @@ await vol.screenshot({ path: `${SHOTS}/03-checked-rack.png` });
 
 // Agent calls submit. Tool waits for the human click.
 const submitPromise = call(vol, 'submit-contribution');
-await vol.waitForSelector('dialog.confirm[open]', { timeout: 5000 });
+await vol.waitForSelector('dialog.qt-confirm[open]', { timeout: 5000 });
 await vol.screenshot({ path: `${SHOTS}/04-confirm.png` });
 await vol.waitForTimeout(800);
 const stillPending = await Promise.race([submitPromise.then(() => 'resolved'), vol.waitForTimeout(300).then(() => 'pending')]);
 check('7a. submit waits for the human click', stillPending === 'pending');
-await vol.click('dialog.confirm .btn.primary');
+await vol.click('dialog.qt-confirm .qt-btn-primary');
 const submitted = await submitPromise; await vol.waitForTimeout(300);
 names = await toolNames(vol);
 check('7b. submit succeeds after the click and unregisters check/submit', submitted.startsWith('Submitted') && !names.includes('submit-contribution') && !names.includes('check-contribution'), submitted.slice(0, 70));

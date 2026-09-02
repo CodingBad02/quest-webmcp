@@ -1,0 +1,397 @@
+/*
+ * qt.css — @gatherlight/quest-tools portable stylesheet.
+ * Pure CSS. No web fonts, no network requests, no build step.
+ * Every selector is scoped under .qt at low specificity. See DESIGN.md §2.
+ */
+
+/* ---------- §2 Portable token contract + defensive reset ---------- */
+.qt {
+  /* Color */
+  --qt-color-bg: #F7F7F5;
+  --qt-color-surface: #FFFFFF;
+  --qt-color-surface-2: #F0EFE9;
+  --qt-color-surface-3: #E6E5DE;
+  --qt-color-border: #DDDDD8;
+  --qt-color-text: #1A1A18;
+  --qt-color-text-muted: #5B5B57;
+  --qt-color-accent: #2F6F4F;
+  --qt-color-accent-ink: #FFFFFF;
+  --qt-color-info: #2A5C99;
+  --qt-color-warn: #B45309;
+  --qt-color-danger: #B3261E;
+  --qt-color-gold: #FFD166;
+  --qt-color-focus: #2F6F4F;
+
+  /* Type */
+  --qt-font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --qt-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --qt-font-size-xs: 12px;
+  --qt-font-size-sm: 13px;
+  --qt-font-size-md: 15px;
+  --qt-font-size-lg: 17px;
+  --qt-font-weight-regular: 400;
+  --qt-font-weight-medium: 500;
+  --qt-font-weight-semibold: 600;
+  --qt-line-height-tight: 1.25;
+  --qt-line-height-normal: 1.5;
+
+  /* Space */
+  --qt-space-1: 4px;
+  --qt-space-2: 8px;
+  --qt-space-3: 12px;
+  --qt-space-4: 16px;
+  --qt-space-5: 24px;
+  --qt-space-6: 32px;
+  --qt-space-7: 48px;
+  --qt-space-8: 64px;
+
+  /* Radius */
+  --qt-radius-sm: 4px;
+  --qt-radius-md: 10px;
+  --qt-radius-lg: 16px;
+  --qt-radius-pill: 999px;
+
+  /* Motion */
+  --qt-duration-fast: 120ms;
+  --qt-duration-base: 240ms;
+  --qt-duration-slow: 400ms;
+  --qt-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --qt-ease-in: cubic-bezier(.6, 0, .8, .2);
+  --qt-ease-linear: linear;
+
+  /* Stack */
+  --qt-z-rack: 10;
+  --qt-z-backdrop: 100;
+  --qt-z-dialog: 101;
+  --qt-z-toast: 120;
+
+  /* Defensive reset: a host page's own reset (or lack of one) must not reach in. */
+  line-height: var(--qt-line-height-normal);
+  color: var(--qt-color-text);
+  font-family: var(--qt-font-ui);
+  font-size: var(--qt-font-size-sm);
+  interpolate-size: allow-keywords;
+}
+.qt, .qt *, .qt *::before, .qt *::after { box-sizing: border-box; }
+.qt ul, .qt ol { list-style: none; margin: 0; padding: 0; }
+.qt h1, .qt h2, .qt h3, .qt h4, .qt h5, .qt h6, .qt p, .qt dl, .qt dd { margin: 0; }
+
+/* ---------- §5 / §5a Rack ---------- */
+/* .qt-rack and .qt-confirm and .qt-handoff carry class="qt qt-x" on one element
+   per the §5a markup contract, so their own rules are compound (.qt.qt-x);
+   everything nested inside them is scoped as a descendant (.qt .qt-x). */
+.qt.qt-rack {
+  position: relative;
+  z-index: var(--qt-z-rack);
+  background: var(--qt-color-surface);
+  border: 1px solid var(--qt-color-border);
+  border-radius: var(--qt-radius-sm);
+  padding: var(--qt-space-4) var(--qt-space-4) var(--qt-space-3);
+}
+.qt .qt-rack-title {
+  font-size: var(--qt-font-size-md);
+  font-weight: var(--qt-font-weight-semibold);
+  line-height: var(--qt-line-height-tight);
+  margin: 0 0 var(--qt-space-2);
+}
+/* Neutral runtime pill, §7: muted text on surface-2, no border-color signaling. */
+.qt .qt-rack-runtime {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--qt-font-size-xs);
+  font-weight: var(--qt-font-weight-medium);
+  color: var(--qt-color-text-muted);
+  background: var(--qt-color-surface-2);
+  border-radius: var(--qt-radius-pill);
+  padding: var(--qt-space-1) var(--qt-space-3);
+  margin: 0 0 var(--qt-space-3);
+}
+.qt .qt-rack-list {
+  interpolate-size: allow-keywords;
+  border: 1px solid var(--qt-color-border);
+  border-radius: var(--qt-radius-sm);
+  overflow: hidden;
+}
+.qt .qt-rack-list > .qt-tool + .qt-tool { border-top: 1px solid var(--qt-color-border); }
+
+.qt .qt-rack-empty {
+  font-size: var(--qt-font-size-sm);
+  color: var(--qt-color-text-muted);
+  text-align: center;
+  padding: var(--qt-space-4) var(--qt-space-3);
+}
+
+/* Fixed row layout: 12px dot column, name + tag on one line, description below. */
+.qt .qt-tool {
+  position: relative;
+  display: grid;
+  grid-template-columns: 12px auto 1fr;
+  column-gap: var(--qt-space-2);
+  row-gap: var(--qt-space-1);
+  align-items: start;
+  min-height: 44px;
+  padding: var(--qt-space-3);
+  background: var(--qt-color-surface);
+  animation: qt-slide-in var(--qt-duration-base) var(--qt-ease-out) both;
+  transition: background var(--qt-duration-base) var(--qt-ease-out);
+}
+.qt .qt-tool:focus-visible { outline: 2px solid var(--qt-color-focus); outline-offset: -2px; }
+
+.qt .qt-tool-dot {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 8px;
+  height: 8px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--qt-color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--qt-color-accent) 14%, transparent);
+}
+.qt .qt-tool-name {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--qt-font-mono);
+  font-size: var(--qt-font-size-sm);
+  font-weight: var(--qt-font-weight-medium);
+  color: var(--qt-color-text);
+  overflow-wrap: anywhere;
+}
+.qt .qt-tool-tag {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  font-family: var(--qt-font-mono);
+  font-size: var(--qt-font-size-xs);
+  font-weight: var(--qt-font-weight-medium);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--qt-color-accent);
+  border: 1px solid color-mix(in srgb, var(--qt-color-accent) 45%, transparent);
+  border-radius: var(--qt-radius-sm);
+  padding: 1px 6px;
+  line-height: var(--qt-line-height-normal);
+}
+.qt .qt-tool-desc {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  font-size: var(--qt-font-size-sm);
+  line-height: var(--qt-line-height-normal);
+  color: var(--qt-color-text-muted);
+}
+
+/* New: slide in + two ring pulses, settles at 1400ms total. */
+@keyframes qt-slide-in { from { transform: translateX(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes qt-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--qt-color-accent) 45%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
+.qt .qt-tool[data-state="new"] {
+  background: color-mix(in srgb, var(--qt-color-accent) 8%, var(--qt-color-surface));
+  animation: qt-slide-in var(--qt-duration-base) var(--qt-ease-out) both,
+             qt-ring 600ms var(--qt-ease-out) var(--qt-duration-base) 2;
+}
+
+/* Executing: row dims, dot becomes a spinner. */
+@keyframes qt-spin { to { transform: rotate(360deg); } }
+.qt .qt-tool[data-state="executing"] { background: var(--qt-color-surface-2); }
+.qt .qt-tool[data-state="executing"] .qt-tool-desc { color: var(--qt-color-text); }
+.qt .qt-tool[data-state="executing"] .qt-tool-tag { color: var(--qt-color-text-muted); border-color: var(--qt-color-border); }
+.qt .qt-tool[data-state="executing"] .qt-tool-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 0;
+  background: transparent;
+  box-shadow: none;
+  border: 2px solid color-mix(in srgb, var(--qt-color-accent) 28%, transparent);
+  border-top-color: var(--qt-color-accent);
+  animation: qt-spin 1200ms var(--qt-ease-linear) infinite;
+}
+
+/* Removing: fade, then collapse — sequential, not parallel. */
+@keyframes qt-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes qt-collapse { from { height: auto; } to { height: 0; min-height: 0; padding-block: 0; margin-block: 0; border-width: 0; } }
+.qt .qt-tool[data-state="removing"] {
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: qt-fade-out 200ms var(--qt-ease-in) both,
+             qt-collapse 260ms var(--qt-ease-in) 200ms both;
+}
+
+/* Locked, with reason: greyed, lock glyph, no highlight. */
+.qt .qt-tool[data-state="locked"] { animation: none; background: var(--qt-color-surface-2); }
+.qt .qt-tool[data-state="locked"] .qt-tool-name,
+.qt .qt-tool[data-state="locked"] .qt-tool-desc { color: var(--qt-color-text-muted); }
+.qt .qt-tool[data-state="locked"] .qt-tool-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--qt-color-text-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5' fill='none' stroke='%23000' stroke-width='1.6'/%3E%3Crect x='2' y='5.5' width='8' height='5.5' rx='1' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5' fill='none' stroke='%23000' stroke-width='1.6'/%3E%3Crect x='2' y='5.5' width='8' height='5.5' rx='1' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- §5a / §6 Confirmation dialog ---------- */
+.qt.qt-confirm {
+  z-index: var(--qt-z-dialog);
+  width: min(480px, calc(100vw - var(--qt-space-5) * 2));
+  border: none;
+  border-radius: var(--qt-radius-lg);
+  padding: var(--qt-space-6);
+  background: var(--qt-color-surface);
+  color: var(--qt-color-text);
+  box-shadow: 0 28px 70px -16px rgba(7, 9, 18, .25), 0 4px 14px -4px rgba(7, 9, 18, .12);
+}
+.qt.qt-confirm::backdrop {
+  z-index: var(--qt-z-backdrop);
+  background: rgba(7, 9, 18, .5);
+}
+/* 200-220ms rise-and-fade: no named token spans this exact range, so the value is literal. */
+@keyframes qt-rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes qt-fade { from { opacity: 0; } to { opacity: 1; } }
+.qt.qt-confirm[open] { animation: qt-rise 210ms var(--qt-ease-out); }
+.qt.qt-confirm[open]::backdrop { animation: qt-fade 210ms var(--qt-ease-out); }
+/* Optional close hook: a controller may set [data-closing] and defer .close() to animationend. */
+.qt.qt-confirm[data-closing] { animation: qt-rise 210ms var(--qt-ease-in) reverse both; }
+.qt.qt-confirm[data-closing]::backdrop { animation: qt-fade 210ms var(--qt-ease-in) reverse both; }
+
+.qt .qt-confirm-title {
+  font-size: var(--qt-font-size-lg);
+  font-weight: var(--qt-font-weight-semibold);
+  line-height: var(--qt-line-height-tight);
+  margin: 0 0 var(--qt-space-4);
+}
+/* Definition lists: summary sits on surface-2, meta stays flat between hairlines. */
+.qt .qt-confirm-summary,
+.qt .qt-confirm-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--qt-space-3);
+  row-gap: var(--qt-space-1);
+  font-size: var(--qt-font-size-sm);
+  margin: 0 0 var(--qt-space-4);
+}
+.qt .qt-confirm-summary dt,
+.qt .qt-confirm-meta dt { color: var(--qt-color-text-muted); font-weight: var(--qt-font-weight-regular); }
+.qt .qt-confirm-summary dd,
+.qt .qt-confirm-meta dd { color: var(--qt-color-text); font-weight: var(--qt-font-weight-medium); }
+.qt .qt-confirm-summary {
+  background: var(--qt-color-surface-2);
+  border-radius: var(--qt-radius-sm);
+  padding: var(--qt-space-3);
+}
+.qt .qt-confirm-meta {
+  padding-block: var(--qt-space-3);
+  border-block: 1px solid var(--qt-color-border);
+}
+.qt .qt-confirm-body {
+  font-size: var(--qt-font-size-sm);
+  line-height: var(--qt-line-height-normal);
+  margin: 0 0 var(--qt-space-3);
+}
+.qt .qt-confirm-note {
+  font-size: var(--qt-font-size-xs);
+  line-height: var(--qt-line-height-normal);
+  color: var(--qt-color-text-muted);
+  margin: 0 0 var(--qt-space-4);
+}
+.qt .qt-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--qt-space-2);
+}
+.qt .qt-btn {
+  min-height: 44px;
+  padding: var(--qt-space-2) var(--qt-space-4);
+  border-radius: var(--qt-radius-pill);
+  border: 1px solid var(--qt-color-border);
+  background: var(--qt-color-surface);
+  color: var(--qt-color-text);
+  font-family: var(--qt-font-ui);
+  font-size: var(--qt-font-size-md);
+  font-weight: var(--qt-font-weight-medium);
+  cursor: pointer;
+  transition: background var(--qt-duration-fast) var(--qt-ease-out), border-color var(--qt-duration-fast) var(--qt-ease-out);
+}
+.qt .qt-btn:hover { background: var(--qt-color-surface-2); }
+.qt .qt-btn:focus-visible { outline: 2px solid var(--qt-color-focus); outline-offset: 2px; }
+.qt .qt-btn-primary {
+  background: var(--qt-color-accent);
+  border-color: var(--qt-color-accent);
+  color: var(--qt-color-accent-ink);
+}
+.qt .qt-btn-primary:hover {
+  background: color-mix(in srgb, var(--qt-color-accent) 88%, black);
+  border-color: color-mix(in srgb, var(--qt-color-accent) 88%, black);
+}
+@media (max-width: 640px) {
+  .qt .qt-confirm-actions { flex-direction: column-reverse; align-items: stretch; }
+  .qt .qt-btn { width: 100%; }
+}
+
+/* ---------- §7 Handoff provenance strip ---------- */
+.qt.qt-handoff {
+  display: flex;
+  align-items: center;
+  gap: var(--qt-space-2);
+  font-size: var(--qt-font-size-sm);
+  color: var(--qt-color-text-muted);
+  background: var(--qt-color-surface-2);
+  padding: var(--qt-space-2) var(--qt-space-3);
+  border-radius: var(--qt-radius-sm);
+}
+.qt .qt-handoff-origin {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+}
+.qt .qt-handoff-origin::before,
+.qt .qt-handoff-origin::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  width: 8px;
+  height: 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+}
+.qt .qt-handoff-origin::before { left: 0; }
+.qt .qt-handoff-origin::after { left: 6px; }
+.qt .qt-handoff-time {
+  font-family: var(--qt-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--qt-font-weight-medium);
+  color: var(--qt-color-text);
+}
+.qt.qt-handoff[data-expired] { color: var(--qt-color-warn); }
+.qt.qt-handoff[data-expired] .qt-handoff-time { color: var(--qt-color-warn); }
+
+/* ---------- §9 Motion and reduced motion (one global query) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .qt .qt-tool {
+    animation: none;
+    transition-duration: var(--qt-duration-fast);
+  }
+  .qt .qt-tool[data-state="new"] { animation: none; }
+  .qt .qt-tool[data-state="executing"] .qt-tool-dot {
+    animation: none;
+    border: none;
+    box-shadow: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 3px;
+    background: var(--qt-color-accent);
+  }
+  .qt .qt-tool[data-state="removing"] { animation: none; display: none; }
+  .qt.qt-confirm[open],
+  .qt.qt-confirm[data-closing] {
+    animation: qt-fade var(--qt-duration-fast) var(--qt-ease-out);
+    transform: none;
+  }
+  .qt.qt-confirm[open]::backdrop,
+  .qt.qt-confirm[data-closing]::backdrop {
+    animation: qt-fade var(--qt-duration-fast) var(--qt-ease-out);
+  }
+  .qt .qt-btn { transition-duration: var(--qt-duration-fast); }
+}

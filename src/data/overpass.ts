@@ -1,6 +1,5 @@
 import type { Campaign, Quest, QuestType } from '../types';
 import fallback from './fallbackOverpass.json';
-import { REWRITE_CAMPAIGN, rewriteSeeds } from './seedQuests';
 
 const CENTER = { lat: 12.9716, lon: 77.5946 };
 const ENDPOINT = 'https://overpass-api.de/api/interpreter';
@@ -63,7 +62,6 @@ export function buildCampaigns(quests: Quest[]): Campaign[] {
   return [
     pick('access-central-blr', 'Step-free entrances, central Bengaluru', 12),
     pick('hours-central-blr', 'Opening hours, central Bengaluru', 10),
-    { id: REWRITE_CAMPAIGN, name: 'Plain words for public help pages', questIds: rewriteSeeds.map((q) => q.id) },
   ];
 }
 
@@ -72,7 +70,7 @@ export async function loadQuests(): Promise<{ quests: Quest[]; source: 'live' | 
     const raw = localStorage.getItem(CACHE_KEY);
     if (raw) {
       const c = JSON.parse(raw) as { at: number; res: Response };
-      if (Date.now() - c.at < TTL) return { quests: [...elementsToQuests(c.res), ...rewriteSeeds], source: 'cached' };
+      if (Date.now() - c.at < TTL) return { quests: elementsToQuests(c.res), source: 'cached' };
     }
   } catch { /* fall through */ }
   try {
@@ -84,8 +82,8 @@ export async function loadQuests(): Promise<{ quests: Quest[]; source: 'live' | 
     const res = (await r.json()) as Response;
     if (!res.elements?.length) throw new Error('empty');
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), res })); } catch { /* ignore */ }
-    return { quests: [...elementsToQuests(res), ...rewriteSeeds], source: 'live' };
+    return { quests: elementsToQuests(res), source: 'live' };
   } catch {
-    return { quests: [...elementsToQuests(fallback as unknown as Response), ...rewriteSeeds], source: 'fallback' };
+    return { quests: elementsToQuests(fallback as unknown as Response), source: 'fallback' };
   }
 }

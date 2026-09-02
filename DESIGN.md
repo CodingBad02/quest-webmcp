@@ -1,227 +1,424 @@
-# DESIGN.md
+# DESIGN.md — v2
 
-Source of truth: SPEC.md Part C. Edit there, regenerate here.
+Source of truth: `SPEC.md`. This document is authored directly, not generated. When `SPEC.md` changes, edit this file by hand and re-audit against it.
 
+Scope: the shared npm package `@gatherlight/quest-tools` (capability rack, confirmation dialog) and the two reference sites that consume it, Quest and Survey. The rack and dialog are the portable instrument. Everything else — the sky, quest cards, the reviewer queue, page headings — is Quest's own app, styled with the same tokens but not shipped in the package.
 
+## 0. Audit findings
 
-## 1. Design principles
+Audited: `src/styles.css`, `index.html`, `src/components/CapabilityRack.tsx`, `ConfirmModal.tsx`, `Sky.tsx`, `QuestList.tsx`, `Workspace.tsx`, `ReviewerQueue.tsx`, `App.tsx`, `src/webmcp/registry.ts`, `src/types.ts`, old `DESIGN.md`.
 
-Five principles. Each ties to one cited reference (full citations in §12).
+**Keep.**
+- The two-surface identity is already real, not aspirational. `styles.css` §"The sky" (dark navy `--sky`, serif `sky-headline`) versus §"Capability rack" (flat white, mono `tool-name`) is the north star direction implemented. Keep the split; formalize it as the token contract in §2.
+- Fraunces for headings, Inter for interface, system mono for the rack (`index.html` font links; `styles.css` `--serif`/`--sans`/`--mono`). These stay as Quest's skin mapping, not as package defaults (see §1, §3).
+- Rack timing: 240ms slide-in, a 1400ms window before "new" settles to "available" (`registry.ts:66`), a 600ms×2 highlight ring, 200ms fade + 260ms collapse on removal, 1200ms linear spin while executing (`styles.css:184-207`). No defect found in three months of use. Keep unchanged; promote to named `--qt-duration-*` tokens (§5).
+- Native `<dialog>` for confirmation, with `showModal()`'s built-in focus containment, `onCancel` mapped to "Keep editing", and focus restored to the field the volunteer was in (`ConfirmModal.tsx`). Keep the mechanism; the copy needs rewriting for v2 (§6).
+- Star grammar: open ring unlit, filled + `feGaussianBlur` glow lit, positions seeded once per campaign, connectors drawn as an MST (`skyLayout.ts`, old `DESIGN.md` §5). Keep; extend from a binary lit/unlit into the three-state grammar in §4 and §8.
+- One global `prefers-reduced-motion` query (`styles.css:238-242`), not per-component overrides. Keep the pattern; extend its coverage list (§9).
 
-1. **Offer real choice, never fake points.** Quests carry difficulty and time tags; volunteers pick, not queue. (Ryan & Deci, 2000)
-2. **Make work visible, never ranked.** Show who did what and why it matters, with no scores or leaderboards. (Erickson & Kellogg, 2000)
-3. **Show one honest step, never total progress.** A goal-gradient bar tracks the current quest only, not lifetime output. (Kivetz, Urminsky & Zheng, 2006)
-4. **Teach one tool at a time, fast.** A volunteer reaches their first submission inside five minutes of landing. (Hodent, 2016)
-5. **Match the task to the person, always.** Time, skill, and language filters run before any quest is shown. (Porto de Albuquerque, Herfort & Eckle, 2016)
+**Fix.**
+- `CapabilityRack.tsx`'s `LOCKED` map hardcodes two literal tool names (`check-contribution`, `submit-contribution`) with hand-written unlock copy. This cannot survive a portable package where a site owner supplies its own operations. Fix: "locked" becomes a real rack-item render state carried in the data the site's `available()` function returns, not an app-side lookup table (§5).
+- The "WebMCP off" pill is styled `.pill.warn` — amber, alert-toned (`App.tsx:58`, `styles.css:50`). Manual mode is a first-class supported mode (`Research Docs/07-north-star.md` §7), not a fault. Fix: recolor to the neutral runtime pill in §7. No color signals "something is wrong" when nothing is wrong.
+- Status is rendered three different ways: `.status` text in quest lists (`QuestList.tsx:58`), `.review-head` plain text (`ReviewerQueue.tsx`), and star lit/unlit (`Sky.tsx`). Fix: one chip component, specified once in §4, used in all four places.
+- `types.ts`'s `ContributionStatus` (`draft | checked | submitted | approved | rejected`) and `RackStatus` (`available | new | executing | removing`) cover five of the ten `SPEC.md` envelope states. `invalid`, `declined`, `stale`, `landed`, and `open` have no visual form yet. Fix: §4 specifies all ten.
+- `styles.css:47-51`'s `.pill.source-*` variants (`source-live`, `source-cached`, `source-fallback`) are a one-off pattern for exactly one pill. Fix: fold into the same chip family as §4 rather than growing a second ad hoc pill system.
 
-## 2. Information architecture
+**Remove.**
+- Nothing structural. The v1 visual language is sound; v2 generalizes it, it does not replace it.
 
-Five screens only. Each row states what the agent can do there.
+## 1. Direction
 
-| Screen | Contains | Agent can |
+Two surfaces, one contrast.
+
+**The sky.** Dark, deep, slow. Serif headline. Real coordinates rendered as stars. This is where impact lives, and it never moves fast.
+
+**The rack.** Flat, bright, mono, exact. A machine panel. This is where the agent lives, and every state change is instant and legible.
+
+Everything else — quest cards, the workspace form, the reviewer queue, page copy — is quiet editorial: the sans body font, restrained color, no decoration that doesn't carry meaning.
+
+**What stays from v1, and why:** Fraunces for headings, Inter for interface text, one gold for stars, one green for actions, no gradients, no stock or generated imagery. This was the right call in v1 and nothing in v2 changes the product's relationship to real places or real people, so nothing here changes.
+
+**What v2 adds:**
+- The rack and the confirmation dialog leave the app and become a portable package. They must look and behave identically on a foreign site that has never heard of Fraunces (§2, §3).
+- Five envelope states become ten (§4). A quest can be stale, declined, or invalid, and each needs its own honest mark.
+- Two real skins now exist side by side: Quest (warm paper, cold sky) and Survey (a plain utility partner site, system fonts, no sky) (§3).
+- Cross-site handoff is now visible UI, not an implementation detail: a provenance strip, a return receipt, a runtime pill (§7).
+- The sky's visual grammar generalizes to a second collective artifact, a knowledge graph, reserved but not built (§8).
+
+## 2. Portable token contract
+
+The package ships CSS custom properties with system defaults. No web font, no network request, no build step required to render correctly on a site that changes nothing.
+
+**Scoping rule.** The rack renders in the host page's light DOM under one class root, `.qt`. Every selector is scoped under it (`.qt .qt-rack …`) at the lowest specificity that still wins, and `.qt` carries a defensive reset (`box-sizing`, `list-style`, `line-height`) so it survives a host's own reset without needing `!important`. The rack needs the host's layout system to place it — inside a grid column on Quest, a right rail or bottom sheet on Survey — so it cannot hide behind a Shadow boundary.
+
+**The confirmation dialog uses Shadow DOM.** It ships as a custom element, `<qt-confirm-dialog>`, with an open shadow root. Two reasons: it is the safety-critical surface in the whole system — a host page's own `dialog { display: none }` reset, competing `z-index`, or third-party CSS must never be able to suppress or corrupt it — and it is a fixed-position overlay, so unlike the rack it never needs to inherit the host's layout context. CSS custom properties cross the shadow boundary by inheritance: a `--qt-*` value set on `:root` or `.qt` still reaches inside the shadow root and themes the dialog. Only *rules* are isolated, not *values*, which is exactly the isolation this component needs and no more.
+
+**Mapping direction.** Quest maps its own design tokens onto `--qt-*`. A partner site (Survey, or any future adopter) maps its own tokens onto `--qt-*`, or changes nothing and gets the system defaults below.
+
+### Default token table
+
+| Token | Default value | Role |
 |---|---|---|
-| Home / Profile setup | Name, language, available time window, skills (photo, writing, phone calls), accessibility needs. One-screen form, no account wall. | Nothing yet — no tools registered until a profile exists. |
-| Quest list | Cards: quest type icon, place or document name, estimated time, distance if relevant. Filter chips (time, skill, language). | Run `find-quests`, filtered by the saved profile. |
-| Quest workspace (per type) | The type-specific form (§7), source data pulled from OpenStreetMap or the source document, a sticky confirm bar. | Run `check-contribution` once fields are filled; `submit-contribution` appears only after a check passes. |
-| Review queue (reviewer tab) | List of pending submissions: diff view (old value vs. new value), approve / send-back buttons, no reviewer identity shown to other reviewers. | Nothing — the reviewer is a human end to end. The agent only reads state to update the volunteer's tab. |
-| Constellation view | The shared sky: one constellation per campaign, star count matching quest count, hover/tap detail. | Nothing — read-only. No tool touches this screen directly. |
+| `--qt-color-bg` | `#F7F7F5` | Rack/dialog page-level background |
+| `--qt-color-surface` | `#FFFFFF` | Card, rack row, dialog surface |
+| `--qt-color-surface-2` | `#F0EFE9` | Secondary surface: rack sublabel row, dialog summary block |
+| `--qt-color-surface-3` | `#E6E5DE` | Tertiary surface: hover state on surface-2 |
+| `--qt-color-border` | `#DDDDD8` | Hairlines, dividers |
+| `--qt-color-text` | `#1A1A18` | Body and rack copy |
+| `--qt-color-text-muted` | `#5B5B57` | Helper text, tool descriptions, timestamps |
+| `--qt-color-accent` | `#2F6F4F` | Primary action, `checked`/`approved` marks |
+| `--qt-color-accent-ink` | `#FFFFFF` | Text/icon on an accent-filled surface |
+| `--qt-color-info` | `#2A5C99` | `open`/`submitted` marks, neutral in-progress state |
+| `--qt-color-warn` | `#B45309` | `declined`/`stale` marks |
+| `--qt-color-danger` | `#B3261E` | `invalid`/`rejected` marks |
+| `--qt-color-gold` | `#FFD166` | `landed` mark, decorative only, never used for text |
+| `--qt-color-focus` | `#2F6F4F` | Focus ring |
+| `--qt-font-ui` | `system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif` | Rack and dialog body text |
+| `--qt-font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace` | Tool names, ids, countdowns |
+| `--qt-font-size-xs` | `12px` | Tags, counts |
+| `--qt-font-size-sm` | `13px` | Descriptions, helper text |
+| `--qt-font-size-md` | `15px` | Rack heading, button label |
+| `--qt-font-size-lg` | `17px` | Dialog title |
+| `--qt-font-weight-regular` | `400` | Body |
+| `--qt-font-weight-medium` | `500` | Buttons, tags |
+| `--qt-font-weight-semibold` | `600` | Headings |
+| `--qt-line-height-tight` | `1.25` | Headings |
+| `--qt-line-height-normal` | `1.5` | Body |
+| `--qt-space-1` … `--qt-space-8` | `4 8 12 16 24 32 48 64` (px) | Spacing scale |
+| `--qt-radius-sm` | `4px` | Rack rows, inputs, small controls. The rack is flat and exact; it never takes a softer corner |
+| `--qt-radius-md` | `10px` | Cards |
+| `--qt-radius-lg` | `16px` | Dialog |
+| `--qt-radius-pill` | `999px` | Tags, buttons |
+| `--qt-duration-fast` | `120ms` | Reduced-motion ceiling; small state flips |
+| `--qt-duration-base` | `240ms` | Rack row transitions |
+| `--qt-duration-slow` | `400ms` | Dialog open/close, cross-tab flash |
+| `--qt-ease-out` | `cubic-bezier(.2,.8,.2,1)` | Things appearing |
+| `--qt-ease-in` | `cubic-bezier(.6,0,.8,.2)` | Things leaving |
+| `--qt-ease-linear` | `linear` | The executing spinner only |
+| `--qt-z-rack` | `10` | Rack, in normal flow or sticky |
+| `--qt-z-backdrop` | `100` | Dialog backdrop |
+| `--qt-z-dialog` | `101` | Dialog surface |
+| `--qt-z-toast` | `120` | Transient status messages |
 
-Five screens, five jobs. No screen duplicates another's purpose.
+## 3. Two skins, side by side
 
-## 3. Layout spec — main screen (quest workspace)
-
-Three regions: constellation strip (top), quest workspace (main), capability rack (side). Desktop-first.
-
-| Region | Role | Width / height |
+| Token | Quest | Survey |
 |---|---|---|
-| Constellation strip | Compact horizontal band, current campaign's stars only | Full width, 56px tall |
-| Quest workspace | The active form | Flexible column, capped max-width |
-| Capability rack | Tool state list (§4) | Fixed-width column |
+| `--qt-color-bg` | `#F5F4EF` (warm paper) | `#F7F7F5` (default, unset) |
+| `--qt-color-surface` | `#FFFFFF` (default, unset) | `#FFFFFF` (default, unset) |
+| `--qt-color-accent` | `#2F6F4F` (default, unset) | `#2F6F4F` (default, unset) |
+| `--qt-color-gold` | `#FFD166` (default, unset) | `#FFD166` (default, unset) |
+| `--qt-font-ui` | `Inter, …` (web font, loaded by Quest's shell) | default `system-ui` stack |
+| Dark mode | `@media (prefers-color-scheme: dark)` override block, all tokens remap | none. Survey is light-only |
 
-**At 1920px:** `grid-template-columns: minmax(680px, 760px) 320px;` centered, with side margins absorbing extra width. Workspace never grows past 760px — long line lengths hurt readability.
+Quest overrides three things: the page background (warm paper, which sits *outside* `.qt` — the rack itself stays on the neutral default surface so it reads as the same machine panel regardless of the page around it), the interface font (Inter, loaded once by Quest's shell), and a full dark-mode remap. Survey overrides nothing. It links one stylesheet and gets the system defaults. That is the proof: an unrelated site with no design work gets the same instrument.
 
-**At 1280px:** `grid-template-columns: 1fr 280px;` workspace flexes down to a 560px minimum, rack fixed at 280px.
+**Dark token values (Quest).** Quest's `@media (prefers-color-scheme: dark)` block remaps every `--qt-color-*` token to the dark palette `styles.css` already used for its own `--bg`/`--surface`/etc. family before v2. `--qt-color-gold` is not remapped: DESIGN.md §13 fixes it at the same value in both themes.
 
-**Breakpoint at 900px (mobile fallback):** single column. Order: constellation strip (shrinks to one row, horizontal scroll) → quest workspace → capability rack. The rack collapses into a closed drawer, opened by a small badge in the header showing a live count ("3 tools ready"). Tapping it slides the drawer up from the bottom, 260ms.
+| Token | Dark value |
+|---|---|
+| `--qt-color-bg` | `#111216` |
+| `--qt-color-surface` | `#191a1f` |
+| `--qt-color-surface-2` | `#21222a` |
+| `--qt-color-surface-3` | `#2a2b34` |
+| `--qt-color-border` | `#2c2e37` |
+| `--qt-color-text` | `#ecedf1` |
+| `--qt-color-text-muted` | `#a9adb8` |
+| `--qt-color-accent` | `#6fcf97` |
+| `--qt-color-accent-ink` | `#0d1f16` |
+| `--qt-color-info` | `#b3bccf` |
+| `--qt-color-warn` | `#d8b25c` |
+| `--qt-color-danger` | `#f2867a` |
+| `--qt-color-focus` | `#6fcf97` (same as `--qt-color-accent`) |
 
-Header height stays 56px at every breakpoint. Nothing in the header ever wraps to two lines.
+**Why the rack still reads as the same instrument on both sites:** most of the token table is not exposed for override at all.
 
-## 4. Capability rack — visual states
+| May a skin override it? | Properties |
+|---|---|
+| Yes | Color tokens (`--qt-color-*`), `--qt-font-ui`, `--qt-font-mono`, radius tokens (`--qt-radius-*`) |
+| No — fixed by the package | Tool names, state names, glyph shapes, the DOM order of a rack row (dot → name + tag → description), the type scale (`--qt-font-size-*`, weights, line-heights), the spacing scale, every duration and easing, the z-index scale, the dialog's copy structure and keyboard behavior |
 
-Five states. Each state has fixed copy and timing so the component reads the same on every quest type.
+A skin can make the rack green or blue, sharp-cornered or soft, set in Inter or in the OS default. It cannot make a row taller, a transition slower, or `submit-contribution` render before `check-contribution` passes. Those are the instrument, not the paint.
+
+## 4. Lifecycle state system
+
+`SPEC.md`'s envelope carries ten states. One chip renders all of them, used in exactly four places: quest cards, the workspace, the reviewer queue, and the sky legend. **The chip is not part of the npm package** — it is Quest's own component (and Survey's, if Survey chooses to show contribution status), built from the same `--qt-*` tokens so a state looks identical everywhere a volunteer sees it, but it is not one of the two things `@gatherlight/quest-tools` exports.
+
+Three glyph families carry the meaning so color is never the only signal:
+
+- **Circle** — progress toward a landed contribution. Fill amount tracks progress; `approved` breaks the pattern deliberately (outlined, not filled) per `SPEC.md`'s explicit rule.
+- **Triangle** — needs a person's attention. Filled means "acting now is expected"; outlined means "the volunteer already chose to stop."
+- **Diamond** — a conflict with the world, not with the volunteer's work.
+
+| State | Label | Glyph | Color token | Shape rule |
+|---|---|---|---|---|
+| `available` | Available | Empty circle, 1.5px stroke | `--qt-color-text-muted` | Circle, 0% fill |
+| `open` | Open | Circle, quarter-arc fill | `--qt-color-info` | Circle, partial fill |
+| `checked` | Checked | Circle, filled, checkmark inside | `--qt-color-accent` | Circle, full fill |
+| `submitted` | Sent for review | Circle, filled, static dot at 12 o'clock | `--qt-color-info` | Circle, full fill + orbit mark |
+| `approved` | Approved | Circle, 2px ring, **no fill** | `--qt-color-accent` | Circle, outline only |
+| `landed` | Landed | Circle, filled, soft glow (`feGaussianBlur`, 8px, reused from the sky) | `--qt-color-gold` | Circle, full fill + glow |
+| `invalid` | Needs a fix | Filled triangle, exclamation | `--qt-color-danger` | Triangle, filled |
+| `declined` | Kept editing | Outline triangle, exclamation | `--qt-color-warn` | Triangle, outline |
+| `rejected` | Sent back | Filled triangle, exclamation | `--qt-color-danger` | Triangle, filled |
+| `stale` | Out of date | Filled diamond | `--qt-color-warn` | Diamond, filled |
+
+**The current contribution pulses once.** Whichever chip is the signed-in volunteer's own latest contribution scales `1 → 1.08 → 1` over 400ms, `ease-out`, the first time its state changes while the tab is open — never on page load, never on every re-render (reuse the `firstLit` guard already in `Sky.tsx`). One pulse, then still.
+
+**A star is this chip's circle family**, rendered at sky scale with gold instead of the chip's default accent hue: `available` → the existing unlit ring; `approved` → an outlined ring (new in v2 — v1 only had lit/unlit); `landed` → filled + glow (the existing "lit" star, unchanged). See §8.
+
+## 5. Rack states
 
 | State | Visual | Copy | Timing |
 |---|---|---|---|
-| Available | Solid card, icon, one-line description | `find-quests — matches quests to your time and skills` | Static, no animation |
-| Newly appeared | Slides in from the right, brief highlight ring, "New" tag | `New: submit-contribution is ready` | Slide+fade in 240ms ease-out; highlight pulses twice at 600ms each, then settles |
-| Removed | Fades and collapses height, then leaves the list | `check-contribution is no longer needed` (shown for 1.5s before removal) | Fade 200ms ease-in, height collapse 260ms, sequential not parallel |
-| Executing | Card dims slightly, spinner replaces icon, label changes | `Running check-contribution…` | Spinner loop 1200ms per rotation, no easing (linear) |
-| Blocked | Greyed card, lock icon, no highlight | `Locked — submit unlocks after check-contribution passes` | Static, no animation |
+| Available | Solid row, dot, one-line description | `find-quests — matches quests to your time and skills` | Static |
+| New | Slides in from the right, highlight ring, "New" tag | `New: submit-contribution is ready` | Slide + fade `--qt-duration-base` (240ms) `--qt-ease-out`; ring pulses twice at 600ms each, starting 240ms after slide-in, settling at 1400ms total |
+| Executing | Row dims, dot becomes a spinner, label changes | `Running check-contribution…` | Spin 1200ms per rotation, `--qt-ease-linear` |
+| Removing | Fades, then collapses height, then leaves | `check-contribution is no longer needed` (visible 1.5s before removal starts) | Fade 200ms `--qt-ease-in`, then collapse 260ms `--qt-ease-in` — sequential, not parallel |
+| Locked, with reason | Greyed row, lock glyph, no highlight | The reason string the site's `available()` supplied, e.g. `Unlocks after check-contribution passes` | Static |
 
-**Reduced motion:** disable slide and pulse entirely. State changes become an instant opacity/color swap, capped at 120ms if any transition is used at all. The spinner becomes a static "Running…" label with no rotating icon. Removal skips the collapse animation and disappears on the next state read.
+**Audit decision:** all four numeric timings above are unchanged from v1 (`registry.ts`, `styles.css`). They were already correct — fast enough to read as machine feedback, slow enough to survive a 3-minute demo recording and a low-vision user's tracking. The only change is architectural: they become named `--qt-duration-*` tokens instead of magic numbers, and the 1400ms "new → available" window (previously an undocumented `setTimeout` in `registry.ts:66`) is now a specified value, not an implementation accident.
 
-## 5. Constellation
+**Locked, with reason is new as a data-driven state.** v1 hardcoded which two tool names could be locked and why (`CapabilityRack.tsx`'s `LOCKED` map). That breaks the moment a second site declares its own operations. In v2, any operation a site declares but whose `available()` currently returns false renders locked, with the reason string the site provided — the rack draws what it is given, it does not know the product.
 
-One shared sky. Each campaign (a batch of related quests — one town's missing wheelchair tags, one guide's paragraphs) is its own constellation inside that sky.
+**Fixed row layout**, identical on both skins: a glyph/dot column (12px), then a mono tool name with an optional state tag beside it, then the description below. This order never changes.
 
-**Stars per campaign:** 6 to 14, one star per quest slot in the campaign. Fewer than 6 reads as empty. More than 14 is unreadable at 1080p in a recording.
+### 5a. Markup contract
 
-**Unlit state:** open circle, 4px radius, low-opacity stroke, no fill.
-**Lit state:** filled circle, 6px radius, soft glow (SVG `feGaussianBlur`, blur radius 8px).
+The rack and dialog are plain HTML with fixed class names. Any renderer (React on Quest, vanilla on Survey) emits exactly this. Styles live in one portable stylesheet, `src/qt.css` today, moving unchanged into the package.
 
-**Lighting a star:** a peer approval in the review queue triggers the transition. The volunteer's tab (open in a separate tab or window) updates live via a `BroadcastChannel` message, not a page reload.
+```html
+<aside class="qt qt-rack" aria-label="Agent tools">
+  <h2 class="qt-rack-title">Tools available now</h2>
+  <p class="qt-rack-runtime">Agent runtime: none. Manual mode.</p>
+  <ul class="qt-rack-list" aria-live="polite">
+    <li class="qt-tool" data-state="available" tabindex="0">
+      <span class="qt-tool-dot" aria-hidden="true"></span>
+      <span class="qt-tool-name">find-quests</span>
+      <span class="qt-tool-tag">New</span>
+      <span class="qt-tool-desc">Matches quests to your time and skills.</span>
+    </li>
+    <li class="qt-tool" data-state="locked" tabindex="0">
+      <span class="qt-tool-dot" aria-hidden="true"></span>
+      <span class="qt-tool-name">submit-contribution</span>
+      <span class="qt-tool-desc">Unlocks after check-contribution passes.</span>
+    </li>
+  </ul>
+  <p class="qt-rack-empty" hidden>No tools right now.</p>
+</aside>
+```
 
-**Showing "who" without ranking:** hover or tap on a lit star reveals one line: `Verified by Priya. Reviewed by Tom.` First names only, no totals, no per-person star count anywhere in the UI. This is the social-translucence move — visibility and accountability, no comparison. (Erickson & Kellogg, 2000)
+`data-state` is one of `available | new | executing | removing | locked`. The tag span is present only for `new` (text `New`) and `executing` (text `Running`). Executing rows render the spinner on `.qt-tool-dot`.
 
-**SVG approach:** star positions are precomputed once per campaign from a seeded pseudo-random scatter (seed = campaign id), so the shape is stable across reloads. Connecting lines are the edges of a minimum spanning tree over the star positions — drawn faint, always present once two adjacent stars are lit. Pure SVG: `<circle>` for stars, `<path>` for connectors, CSS classes toggle lit/unlit, no charting library.
+```html
+<dialog class="qt qt-confirm" aria-labelledby="qt-confirm-title">
+  <h2 class="qt-confirm-title" id="qt-confirm-title">Send this to a reviewer?</h2>
+  <dl class="qt-confirm-summary">
+    <dt>Opening hours</dt><dd>Mo-Fr 08:00-17:00</dd>
+    <dt>Checked by</dt><dd>Phone call</dd>
+  </dl>
+  <dl class="qt-confirm-meta">
+    <dt>Destination</dt><dd>Quest's review queue</dd>
+    <dt>Visibility</dt><dd>Held for review. Not public yet.</dd>
+    <dt>License</dt><dd>Open Database License (ODbL)</dd>
+  </dl>
+  <p class="qt-confirm-body">A person checks this before it changes anything public. You can edit it again if it's sent back.</p>
+  <p class="qt-confirm-note">This closes on its own if you wait 90 seconds. Nothing is sent until you choose.</p>
+  <div class="qt-confirm-actions">
+    <button class="qt-btn" value="cancel">Keep editing</button>
+    <button class="qt-btn qt-btn-primary" value="confirm">Send for review</button>
+  </div>
+</dialog>
+```
 
-**Sizing:** strip view (header) 56px tall, full constellation view up to 720px max-width viewBox, scales down proportionally on mobile.
+Until the package exists, the dialog renders in light DOM with these classes. The `<qt-confirm-dialog>` shadow wrapper (§2) arrives with package extraction and wraps this same markup.
 
-**Animation:** lighting a star is one transition, capped at 500ms (`scale 0.6→1, opacity 0→1, ease-out`). The connecting line to its nearest lit neighbor draws in over 400ms, starting after the star settles. Total sequence stays under 600ms.
+## 6. Confirmation dialog
 
-**Reduced motion:** skip the scale/opacity tween and the line draw. Set the star to its final lit state directly, optionally with a single 150ms fade.
+Native `<dialog>`, rendered inside `<qt-confirm-dialog>`'s shadow root (§2). One pending confirmation per page: a second `submit-contribution` call while one is open resolves immediately with `state: 'declined'` and `message: 'Finish or close the current confirmation first.'` — matching the platform's own behavior, since a second `showModal()` on an open dialog already throws.
 
-## 6. Human confirmation UI for submit
+Two copy modes, selected by the adapter. P0 only ships review mode; public-write mode is reserved grammar for P1's write-back and specified now so the dialog never needs a second design pass.
 
-**Modal, not inline.** Submission is rare, consequential, and goes to a real human reviewer — it earns an interruption. An inline bar would blend into routine form activity; this moment needs to read as distinct on camera and to the volunteer. (Aligns with Apple's generative-AI guidance to keep the human as the deciding party for consequential actions, and Microsoft HAX's guidance to make consequences of an action clear before it happens — see §12.)
-
-**Copy:**
+**Review mode (P0 — every quest today):**
 
 - Title: `Send this to a reviewer?`
-- Body: `A person will check your answer before it's used. You can still edit it after sending if it's sent back.`
-- Primary button: `Send for review`
-- Secondary button: `Keep editing`
+- Summary: the exact fields the volunteer filled, verbatim (for example: `Opening hours: Mo-Fr 08:00-17:00 · Checked by: phone call`)
+- Destination: `Destination: {site name}'s review queue`
+- Visibility: `Visibility: Held for review. Not public yet.`
+- License: `License: {adapter license}` (for example, `Open Database License (ODbL)`)
+- Body: `A person checks this before it changes anything public. You can edit it again if it's sent back.`
+- Buttons: `Keep editing` / `Send for review`
+- Timeout notice, shown once near the buttons, not a ticking countdown: `This closes on its own if you wait 90 seconds. Nothing is sent until you choose.`
 
-**Focus order:** modal opens with focus on the title (`role="dialog"`, `aria-labelledby` pointing to it). Tab order: title (announced, not focusable) → `Keep editing` → `Send for review`. Focus returns to the field the volunteer last edited if they cancel.
+**Public-write mode (P1, reserved — reviewer-owned direct edits):**
 
-**Keyboard:** `Esc` closes and equals `Keep editing`. `Enter` on the focused button activates it. Focus is trapped inside the modal while open. No action fires on `Enter` from a background field — only from a focused button.
+- Title: `Publish this change?`
+- Destination: `Destination: {source element or entity, e.g. OpenStreetMap way 483920}`
+- Visibility: `Visibility: Public immediately, under your account.`
+- License: same license line as review mode
+- Body: `This writes to the public record now, under your account. A new edit can correct it later; nothing here can be quietly undone.`
+- Buttons: `Keep editing` / `Publish`
 
-## 7. Workspace per quest type
+**Outcomes.** Confirm resolves `submitted` (review mode) or `landed` (public-write mode, after the write succeeds). `Keep editing`, `Esc`, backdrop click, and the 90-second timeout all resolve the same way: `state: 'declined'`, message `Kept editing. Nothing was sent.` (or, on timeout, `No response in 90 seconds. Nothing was sent.`). A stale source revision or a failed re-validation never reaches the dialog at all — the tool returns `stale` or `invalid` before offering to confirm.
 
-| Field / element | `verify-hours` | `access-photo` | `plain-rewrite` |
-|---|---|---|---|
-| Read-only context | Place name, address, current OSM `opening_hours` value if any (often blank) | Place name, address, map thumbnail | Source paragraph, read-only scroll box |
-| Main input | Text field for the new `opening_hours` string | Photo upload/camera control | Multi-line textarea for the rewrite |
-| Helper controls | Preset buttons: `Weekdays`, `Weekends`, `24/7`, `Closed public holidays` — each inserts valid syntax | Access select: `Yes` / `No` / `Partial` / `Can't tell` | Live reading-level meter (Flesch–Kincaid grade estimate), updates as the volunteer types |
-| Helper copy | `Use HH:MM, not H:MM. Example: Mo-Fr 08:00-17:00. A comma splits a lunch break; a semicolon splits a different day.` | `Step-free means no stairs, no high curb, and a door wide enough for a wheelchair. If you're not sure, pick "Can't tell."` | `Aim for grade 8 or lower. Short sentences. Common words. One idea per sentence.` |
-| Validation shown by `check-contribution` | Rejects malformed syntax with the exact bad token highlighted (per OSM `opening_hours` grammar) | Rejects a missing photo or a missing access answer | Rejects a rewrite above the target grade level or empty textarea |
+**Focus, keyboard, motion.** `showModal()` gives native focus containment in evergreen browsers; the controller still restores focus explicitly to the field the volunteer last touched on any close path, matching `ConfirmModal.tsx` today. `Esc` equals `Keep editing`. `Enter` activates only a focused button, never a background field. Under `prefers-reduced-motion: reduce`, the dialog's rise-and-fade collapses to a 120ms opacity crossfade with no translation.
 
-OSM `opening_hours` syntax reference, verified: `Mo-Fr 08:00-17:00` for weekdays; commas split intervals in one day (`08:00-12:00,13:00-17:30`); semicolons split day groups; `off` marks a closure (`Tu off`, `PH off`); `24/7` for always open. ([OpenStreetMap wiki, Key:opening_hours](https://wiki.openstreetmap.org/wiki/Key:opening_hours))
+**Untrusted content.** Any external text inside the summary (a quest title, a place name) is a plain text node, never HTML, capped at 120 characters with an ellipsis, and carries `untrustedContentHint` at the tool-output layer per `SPEC.md`.
 
-## 8. Visual system
+## 7. Handoff provenance
 
-**Typography:** Inter (variable font, Google Fonts), fallback stack `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`. Use the variable axis for weight, not separate font files.
+**Receiving-site strip.** Survey shows this at the top of its workspace the moment it exchanges the handoff:
 
-| Role | Size | Weight |
-|---|---|---|
-| Page title | 28px | 600 |
-| Section heading | 20px | 600 |
-| Body | 16px | 400 |
-| Helper / caption | 14px | 400 |
-| Button label | 15px | 500 |
+`Carried from Quest · check-contribution ready · expires 4:59`
 
-**Color tokens.** Contrast ratios computed against the token's typical background (WCAG 2.2 relative-luminance formula), all meet or exceed AA (4.5:1 text, 3:1 UI components).
+The countdown is real and ticks down in `--qt-font-mono`, tabular figures — unlike the confirmation dialog's timeout, this urgency is true (the handoff really does expire), so it is allowed to count down live. Style: a thin bar, `--qt-color-surface-2` background, `--qt-color-text-muted` text, a small origin mark at the left (a generic chain-link glyph if the origin site can't be identified). On expiry, the copy replaces itself: `Handoff expired. Ask your agent to reopen this quest from Quest.` in `--qt-color-warn`, no action available.
 
-| Token | Light hex | Dark hex | Role | Contrast (light / dark) |
-|---|---|---|---|---|
-| `--bg` | #F7F7F5 | #121212 | Page background | — |
-| `--surface` | #FFFFFF | #1B1B1B | Cards, rack items | — |
-| `--text` | #1A1A18 | #EDEDEA | Body text | 16.2:1 / 16.1:1 |
-| `--text-muted` | #5B5B57 | #B7B7B2 | Helper text, captions | 6.4:1 / 9.4:1 |
-| `--border` | #DDDDD8 | #333331 | Card and input borders | — |
-| `--accent` | #2F6F4F | #6FCF97 | Primary buttons, lit-star fill link | 6.0:1 / 10.0:1 |
-| `--accent-info` | #2A5C99 | #7FB2F0 | Capability-rack "available" accent | 6.8:1 / 8.6:1 |
-| `--warning` | #B45309 | #F2B84B | Blocked state | 5.0:1 / 10.6:1 |
-| `--danger` | #B3261E | #F2867A | Errors | 6.5:1 / 7.6:1 |
-| `--star-unlit` | #C7C7C2 | #3A3A38 | Unlit star stroke | — |
-| `--star-lit` | #FFD166 | #FFD166 | Lit star fill and glow | decorative, not used for text |
+**Return receipt on Quest.** When work comes back from a partner site, it appears in the volunteer's own contribution list with the same chip (§4) plus a small muted mono tag: `via Survey`. Example: `Sent for review — via Survey · Elm Street Library entrance photo`.
 
-**Spacing scale (px):** 4, 8, 12, 16, 24, 32, 48, 64.
+**Runtime pill.** Feature-detected, never boastful — plain text, no accent color, no icon celebrating itself. This replaces the amber "WebMCP off" pill flagged in §0:
 
-**Radius:** small 6px (inputs), medium 10px (cards), large 16px (modal), pill 999px (chips, badges).
+| Condition | Copy |
+|---|---|
+| WebMCP present, runtime identifiable | `Agent runtime: Chrome 153` |
+| WebMCP present, runtime unclear | `Agent runtime: detected` |
+| WebMCP absent | `Agent runtime: none. Manual mode.` |
 
-**Shadow:** one level only. Light: `0 1px 2px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04)`. Dark: skip shadow, use a 1px `--border` instead — shadows barely register on dark backgrounds.
+All three render in the same neutral pill style (`--qt-color-text-muted` on `--qt-color-surface-2`, no border-color signaling). Manual mode is not a degraded state; it does not get a warning color.
 
-## 9. Motion
+## 8. Collective artifacts
+
+**The sky** is the ten-state chip's circle family (§4), rendered at sky scale in gold instead of accent:
+
+- `available` (not yet contributed) → open ring, low-opacity stroke, no fill.
+- `approved` (reviewed, not yet landed) → outlined ring, no fill — **new in v2**. v1 only distinguished lit from unlit; v2 adds this middle truth, because a reviewer's approval and a source's actual acceptance are different facts and the sky must not conflate them.
+- `landed` (the source accepted the write) → filled, soft glow — unchanged from v1's "lit" star.
+
+The current contribution pulses once on ignition (500ms, scale `.6→1`, opacity `0→1`, `--qt-ease-out`), its nearest lit neighbor's connector draws in over the following 400ms, and the whole sequence stays under 600ms — unchanged from v1. Hover or tap reveals first names only: `Verified by Priya. Reviewed by Tom.` No per-person counts, no ranks, no lifetime score, anywhere.
+
+**The knowledge graph (Wikidata, reserved — not built in P0).** Same primitives as the sky: SVG circles and paths, no charting library, no continuous scale.
+
+- **Entity node** — a circle, one of three fixed sizes by claim count (small / medium / large — never continuous, so it can't read as a leaderboard).
+- **Claim edge** — a line from the entity to a small terminal mark representing its source.
+- **Approved, not yet landed** — dashed edge, outlined terminal mark.
+- **Landed** — solid edge, filled terminal mark, the same gold used for stars, the same single-pulse rule on the current contribution.
+
+No node ever shows an edit count beside a name. The grammar is specified so a future build has no open design questions; it is not implemented now.
+
+## 9. Motion and reduced motion
 
 | Moves | Never moves |
 |---|---|
-| Capability rack items on appear/remove/execute | Layout while typing in any field |
-| Star lighting and connector drawing | Quest list order, except by explicit filter change |
-| Confirmation modal open/close | Anything decorative or idle (no ambient background animation) |
-| Live cross-tab update highlight (brief background flash on the field that changed) | The header height or grid columns |
+| Rack rows on appear / remove / execute | Layout while typing in any field |
+| Star and knowledge-graph marks lighting, connectors drawing | Quest list order, except by an explicit filter change |
+| Confirmation dialog open / close | The header height or the grid columns |
+| Handoff countdown digits, cross-tab flash on a changed field | Anything decorative or idle — no ambient background animation, ever |
 
-**Durations:** rack transitions 200–260ms, star lighting ≤500ms, modal open/close 200ms, cross-tab flash 400ms.
-**Easing:** `ease-out` for things appearing, `ease-in` for things leaving, `linear` only for the executing spinner.
-**`prefers-reduced-motion: reduce`:** every duration above collapses to 0–120ms crossfades or none. No looping animation survives — the spinner becomes static text, the pulse becomes a single color change.
+| Component | Duration | Easing |
+|---|---|---|
+| Rack row transitions | 200–260ms | `--qt-ease-out` in, `--qt-ease-in` out |
+| Rack "new" ring | 600ms × 2 | `--qt-ease-out` |
+| Executing spinner | 1200ms / rotation | `--qt-ease-linear` (the one linear exception) |
+| Star / graph-mark ignition | ≤500ms | `--qt-ease-out` |
+| Connector draw | 400ms, after ignition settles | `--qt-ease-out` |
+| Dialog open / close | 200–220ms | `--qt-ease-out` / `--qt-ease-in` |
+| Cross-tab field flash | 400ms | `--qt-ease-out` |
+| Chip pulse (current contribution) | 400ms | `--qt-ease-out` |
 
-## 10. Copy and tone
+**`prefers-reduced-motion: reduce`:** one global query, not per-component overrides that can drift. Every duration above collapses to 0–120ms crossfades or disappears outright. The executing spinner becomes a static "Running…" label. Rack removal skips the collapse and vanishes on the next state read. Star and graph-mark ignition skips the scale/opacity tween and sets the final state directly, optionally with a single 150ms fade. The confirmation dialog loses its rise, keeping only a 120ms fade.
 
-1. State what happened, not how good it is. No "Amazing work!"
-2. Name the real place or document, never "your quest."
-3. Buttons are verbs: `Check`, `Submit`, `Approve`, not `Go` or `Next`.
-4. Never claim certainty about quality. Say "submitted for review," not "verified."
-5. No urgency or scarcity language. No "Hurry!" or "Only 2 left."
+## 10. Copy rules
+
+1. State what happened, not how good it is. No `Amazing work!`.
+2. Name the real place, document, or entity — never `your quest`.
+3. Buttons are verbs: `Check`, `Submit`, `Approve`, `Publish` — not `Go` or `Next`.
+4. Never claim certainty the app hasn't earned. `Sent for review`, not `Verified`. `Landed`, only once the source confirms it — `approved` never implies `landed`.
+5. No urgency or scarcity language, with one narrow exception: a handoff countdown is a true constraint and may count down (§7). A confirmation timeout is not — state it once, don't tick it.
 6. Errors state the fact and the fix, in that order, never blame.
-7. Sentences stay under 20 words. One idea per sentence. Same term every time: "quest," never "task" or "mission."
-8. No exclamation points in system copy. Enthusiasm is the volunteer's, not the app's.
-
-**Examples:**
-
-| Context | Copy |
-|---|---|
-| Empty quest list | `No quests match right now. Try widening your time window.` |
-| Empty constellation | `This campaign has no lit stars yet. Be the first.` |
-| Validation error | `08:00 needs a closing time. Example: 08:00-17:00.` |
-| Submit success | `Sent to a reviewer. You'll see it here when it's checked.` |
-| Approval (volunteer's tab) | `Priya's photo of Elm Street Library was approved. A star lit up.` |
+7. Sentences stay under 20 words. One idea per sentence. Same term every time: `quest`, `reviewer`, `contribution` — never a synonym for variety.
+8. No exclamation points in system copy. Enthusiasm belongs to the volunteer, not the app.
+9. Runtime and provenance copy is informational, never a boast. `Agent runtime: Chrome 153`, not `Powered by AI!`.
 
 ## 11. Accessibility checklist
 
-1. Visible focus ring on every interactive element, 2px minimum, never removed with `outline: none` alone.
+1. Visible focus ring on every interactive element, 2px minimum, `--qt-color-focus`, never removed with `outline: none` alone.
 2. Every form input has a programmatic `<label>`, not placeholder-only text.
-3. Capability-rack state changes announce via `aria-live="polite"` (appear, remove, blocked); avoid `assertive` except for a blocking form error.
-4. Star lighting on the volunteer's tab announces via a polite live region: "A star lit up for [place]."
-5. Lit/unlit and available/blocked states never rely on color alone — pair with icon and text.
-6. Touch targets minimum 44×44px, including capability-rack cards and star hit areas.
-7. Capability rack items are keyboard-focusable even when not clickable, so screen-reader users can read their state.
-8. Modal traps focus, restores it on close, and is dismissible with `Esc` (§6).
-9. Form validation errors link to their field with `aria-describedby`.
-10. Reviewer-queue new items announce via a live region in the reviewer tab.
-11. Tooltips and helper text trigger on focus, not hover-only.
-12. Respect `prefers-reduced-motion` globally — one media query, not per-component overrides that can drift out of sync.
+3. Rack state changes announce via `aria-live="polite"` (new, removed, locked); reserve `assertive` for a blocking form error only.
+4. A landed star or graph mark announces on the volunteer's tab through a polite live region: `A star lit up for {place}.`
+5. No state — chip, star, rack row — ever relies on color alone; each pairs a shape or icon with text (§4, §5).
+6. Touch targets minimum 44×44px: rack rows, star hit areas, chip tap targets.
+7. Rack rows are keyboard-focusable even when not clickable, so a screen-reader user can read their state.
+8. The confirmation dialog traps focus (native via `showModal()`, with an explicit restore-on-close fallback), and is dismissible with `Esc`.
+9. Custom properties cross the shadow boundary, but ARIA relationships (`aria-labelledby`, `aria-describedby`) must stay inside one root — verify none reach across the `<qt-confirm-dialog>` shadow boundary.
+10. The handoff countdown updates via a polite live region at most once per 15 seconds, not on every tick — a screen reader should not narrate a stopwatch.
+11. Form validation errors link to their field with `aria-describedby`.
+12. Respect `prefers-reduced-motion` globally, one media query, everywhere in §9's table.
 
-## 12. Design references
+## 12. Layout
+
+**Quest.** Three regions: the sky (top), the quest workspace (main), the rack (side). The sky is the hero while browsing: `52vh`, headline in Fraunces, real stars. Once a quest is open, or in the reviewer role, it shrinks to a `140px` band so the work has the page. It is never a 56px strip; the hero is the identity.
+
+- At 1920px: `grid-template-columns: minmax(680px, 760px) 320px;`, centered. The workspace never exceeds 760px.
+- At 1280px: `grid-template-columns: minmax(560px, 1fr) 280px;`.
+- Below 900px: single column. Order is sky (hero `40vh` browsing, `96px` band working) → workspace → rack. The rack collapses into a bottom-sheet drawer, opened by a badge showing a live count (`3 tools ready`), sliding up in 260ms.
+
+**Survey.** No sky. Single column by default.
+
+- Wide (≥1024px): the rack sits as a right rail, `280px` fixed, alongside the main content column.
+- Narrow (<1024px): the rack becomes a bottom sheet, identical mechanism to Quest's mobile rack — this is the same instrument, so its mobile fallback is not reinvented per site.
+
+**Shared breakpoints:** `1280px`, `1024px` (Survey's rail-to-sheet point), `900px` (Quest's column-to-sheet point), `640px` (dense mobile adjustments: hidden secondary pills, stacked dialog buttons). The header or top bar never exceeds 56–72px and never wraps to two lines, on either site.
+
+## 13. Contrast
+
+All pairs meet or exceed WCAG AA (4.5:1 body text, 3:1 large text and UI components), computed against relative luminance.
+
+| Pair | Light | Dark (Quest only) |
+|---|---|---|
+| `--qt-color-text` on `--qt-color-surface` | 17.4:1 | 14.7:1 |
+| `--qt-color-text` on `--qt-color-bg` | 16.3:1 | 16.0:1 |
+| `--qt-color-text-muted` on `--qt-color-surface` | 6.8:1 | 8.6:1 |
+| `--qt-color-text-muted` on `--qt-color-surface-2` | 5.9:1 | — |
+| `--qt-color-accent` on `--qt-color-surface` | 6.0:1 | 9.1:1 |
+| `--qt-color-accent-ink` on `--qt-color-accent` | 6.0:1 | 9.0:1 |
+| `--qt-color-info` on `--qt-color-surface` | 6.8:1 | 7.8:1 |
+| `--qt-color-warn` on `--qt-color-surface` | 5.0:1 | 9.6:1 |
+| `--qt-color-danger` on `--qt-color-surface` | 6.5:1 | 6.9:1 |
+| `--qt-color-gold` on `--sky` (Quest sky, both themes) | 13.3:1 (decorative; not used for text) | 13.3:1 |
+| sky text (`--sky-ink`) on `--sky` | 17.0:1 | 17.0:1 |
+| sky muted (`--sky-muted`) on `--sky` | 8.8:1 | 8.8:1 |
+
+`--qt-color-border` on `--qt-color-surface` is 1.4:1 — below the 3:1 UI-component threshold. This is a deliberate, narrow exception: every bordered control (input, rack row, card) also carries a label, padding, and, for interactive states, a focus ring or shape change, so no control depends on the border alone to be identified. It stays a hairline, not a boundary of record.
+
+**Dark mode.** Quest follows `prefers-color-scheme: dark` with no manual toggle — every token above remaps, and the sky stays the same dark surface in both themes (it was already dark; "dark mode" only changes the paper around it). Survey ships light-only. Nothing here prevents Survey from adding a dark override later — the tokens make it a one-line change — but it is not part of this contract, since a single-purpose partner site has not asked for one.
+
+## 14. Anti-patterns
+
+1. Fake or prefilled progress bars implying work already done.
+2. Leaderboards, rankings, or any "top contributor" display — for people, or for graph entities.
+3. Points, badges, or streaks with no connection to real outcomes.
+4. Confetti, fireworks, or celebratory animation on a routine action.
+5. Gradients, glassmorphism, or glowing-orb decoration with no functional meaning.
+6. Dark patterns: forced continuity, disguised ads, confirm-shaming copy (`No thanks, I don't want to help`).
+7. Auto-submitting anything the agent prepared without an explicit human confirmation.
+8. Claiming a quality the app hasn't earned: `Verified!`, `100% accurate`, or `landed` before the source has confirmed it.
+9. A ticking countdown on anything that isn't a real, external deadline — the confirmation timeout gets one calm sentence, not a stopwatch (§6, §10).
+10. A boastful runtime pill (`AI-Powered!`) or a warning color on manual mode, which is a supported mode, not a fallback (§7).
+11. Two different visual treatments for the same lifecycle state in two different surfaces — there is one chip (§4); a second one is a bug, not a variant.
+
+## 15. References
+
+Carried from v1; the reward-system rationale and accessibility baseline are unchanged by v2's protocol work.
 
 | # | Reference | What we borrow |
 |---|---|---|
-| 1 | Ryan & Deci, 2000. "Self-Determination Theory and the Facilitation of Intrinsic Motivation, Social Development, and Well-Being." [PDF](https://selfdeterminationtheory.org/SDT/documents/2000_RyanDeci_SDT.pdf) | Autonomy, competence, relatedness — task choice over points. |
-| 2 | Morschheuser, Hamari & Maedche, 2019. "Cooperation or Competition — When Do People Contribute More?" [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S1071581918305822) | Honest caveat: competition can out-produce cooperation. No-leaderboards is an ethical choice, not a proven performance win. |
-| 3 | Nicholson, 2015. "A RECIPE for Meaningful Gamification." [Preprint](https://scottnicholson.com/pubs/recipepreprint.pdf) | Reflection, choice, information, play, exposition, engagement — the frame for the whole reward system. |
-| 4 | Bogost, 2011. "Gamification Is Bullshit." [Essay](https://bogost.com/writing/blog/gamification_is_bullshit/) | The hostile-review test: if the constellation just dresses up unpaid labor, cut it. |
-| 5 | Kivetz, Urminsky & Zheng, 2006. "The Goal-Gradient Hypothesis Resurrected." [Study](https://journals.sagepub.com/doi/10.1509/jmkr.43.1.39) | One bounded, honest step of progress — never a fake prefilled bar. |
-| 6 | Erickson & Kellogg, 2000. "Social Translucence." [ACM DOI](https://doi.org/10.1145/344949.345004) | Visibility, awareness, accountability without ranking — the basis for the constellation's "who" disclosure. |
-| 7 | Hodent, 2016. "The Gamer's Brain, Part 2: UX of Onboarding and Player Engagement." [GDC session](https://gdcvault.com/play/1022951/The-Gamer-s-Brain-Part) | One task immediately, one mechanic at a time — first contribution before 20 minutes. |
-| 8 | Cox et al., 2015. "Defining and Measuring Success in Online Citizen Science: A Case Study of Zooniverse Projects." [Paper](https://eprints.whiterose.ac.uk/id/eprint/86535/) | Measure accepted useful work, not stars lit or accounts made. |
-| 9 | Porto de Albuquerque, Herfort & Eckle, 2016. "The Tasks of the Crowd." [MDPI](https://www.mdpi.com/2072-4292/8/10/859) | Task typologies and skill matching from Missing Maps — quests filtered by skill, not one-size-fits-all. |
-| 10 | Xie, Yu, Cui, Lee, Carroll & Billah, 2023. "Are Two Heads Better than One? Investigating Remote Sighted Assistance with Paired Volunteers." [PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC11699856/) | Be My Eyes-style fast matching on an objective microtask; also warns that adding collaborators adds coordination cost. |
-| 11 | teamLab, "Forest of Resonating Lamps." [Designboom coverage](https://www.designboom.com/art/teamlab-forest-of-resonating-lamps-maison-et-objet-paris-09-05-2016/) | Lighting one lamp spreads light along a fixed connected path to its neighbors — the model for the constellation's connector lines. |
-| 12 | Hashemi & LaPorte (Hatnote), "Listen to Wikipedia." [Project site](https://listen.hatnote.com/) / [Wikipedia entry](https://en.wikipedia.org/wiki/Listen_to_Wikipedia) | Many small individual edits shown as light and sound in real time, color-coded by contributor type, with no ranking or count of who did most. |
-| 13 | GOV.UK Design System, accessibility strategy and component library. [Site](https://design-system.service.gov.uk/accessibility/accessibility-strategy/) | WCAG 2.2 AA baseline, component-level accessibility guidance. (Equivalent: [U.S. Web Design System](https://designsystem.digital.gov/documentation/accessibility/), same role.) |
-| 14 | Google PAIR, "People + AI Guidebook." [Site](https://pair.withgoogle.com/guidebook/) | Feedback + control pattern — the volunteer sees and can act on what the agent found before anything is sent. |
-| 15 | Microsoft Research, "HAX Toolkit — Guidelines for Human-AI Interaction." [Site](https://www.microsoft.com/en-us/haxtoolkit/ai-guidelines/) | Convey consequences before a consequential action; support efficient correction — basis for the submit confirmation modal (§6). |
-
-No reference above is marked UNVERIFIED — each URL was fetched or returned in a live search result during this drafting session.
-
-## 13. Anti-patterns to avoid
-
-1. Fake or prefilled progress bars that imply work already done.
-2. Leaderboards, rankings, or any "top contributor" display.
-3. Points, badges, or streaks with no connection to real outcomes.
-4. Confetti, fireworks, or celebratory animation on routine actions.
-5. AI-slop gradients, glassmorphism, or generic glowing-orb decoration with no functional meaning.
-6. Dark patterns: forced continuity, disguised ads, confirm-shaming copy ("No thanks, I don't want to help").
-7. Auto-submitting anything the agent prepared without a human confirmation step.
-8. Claiming verification quality ("Verified!", "100% accurate") the app cannot back up.
----
-
+| 1 | Ryan & Deci, 2000, *Self-Determination Theory* | Autonomy over points — task choice, not a score. |
+| 2 | Erickson & Kellogg, 2000, *Social Translucence* (ACM) | Visibility and accountability without ranking — the basis for chip and sky disclosure. |
+| 3 | Kivetz, Urminsky & Zheng, 2006, *The Goal-Gradient Hypothesis Resurrected* | One honest, bounded step of progress — never a prefilled bar. |
+| 4 | Bogost, 2011, *Gamification Is Bullshit* | The hostile-review test for the sky and the graph: cut it if it starts to feel like a reward. |
+| 5 | Porto de Albuquerque, Herfort & Eckle, 2016, *The Tasks of the Crowd* (MDPI) | Skill- and task-matched quests, not one-size-fits-all. |
+| 6 | teamLab, *Forest of Resonating Lamps* | Lighting one node spreads light along a fixed connected path — the model for both the sky's and the graph's connectors. |
+| 7 | Hashemi & LaPorte, *Listen to Wikipedia* | Many small edits shown as light in real time, with no ranking of who did most. |
+| 8 | GOV.UK Design System, accessibility strategy | WCAG 2.2 AA baseline and component-level guidance (equivalent: US Web Design System). |
+| 9 | Google PAIR, *People + AI Guidebook* | Feedback and control — the volunteer sees and can act on what the agent found before anything sends. |
+| 10 | Microsoft Research, *HAX Toolkit* | Convey consequences before a consequential action — the basis for §6's dialog copy. |
+| 11 | `SPEC.md`, Public Contracts §"Human confirmation" and §"Collective impact" | The ten-state envelope, the outlined/filled/pulse rule, and the no-karma rule are product requirements, not design choices — this document implements them, it does not originate them. |

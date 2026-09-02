@@ -1,4 +1,4 @@
-export type QuestType = 'verify-hours' | 'access-photo' | 'plain-rewrite';
+export type QuestType = 'verify-hours' | 'access-photo';
 
 export interface Profile {
   name: string;
@@ -24,18 +24,15 @@ export interface Quest {
   languages: string[];
   remote: boolean;
   campaignId: string;
-  /** plain-rewrite only */
-  sourceText?: string;
-  sourceUrl?: string;
-  sourceLicense?: string;
 }
 
 export type ContributionPayload =
   | { kind: 'verify-hours'; openingHours: string; verifiedBy: '' | 'phone' | 'visit' | 'website'; note: string }
-  | { kind: 'access-photo'; imageDataUrl: string; wheelchair: '' | 'yes' | 'limited' | 'no'; note: string }
-  | { kind: 'plain-rewrite'; rewrittenText: string };
+  | { kind: 'access-photo'; imageDataUrl: string; wheelchair: '' | 'yes' | 'limited' | 'no'; note: string };
 
-export type ContributionStatus = 'draft' | 'checked' | 'submitted' | 'approved' | 'rejected';
+/** SPEC.md's ten-state envelope. `open` is the pre-check draft state (v1's `draft`). */
+export type ContributionStatus =
+  | 'available' | 'open' | 'invalid' | 'checked' | 'declined' | 'submitted' | 'approved' | 'rejected' | 'stale' | 'landed';
 
 export interface Contribution {
   id: string;

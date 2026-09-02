@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '../state/store';
 import { ConstellationStatic } from './Constellation';
+import { StateChip } from './StateChip';
 import { buildSkyModel, litMap, placeStars, type SkyMode } from './skyLayout';
 import type { SkyHandle } from './skyScene';
 
@@ -132,22 +133,29 @@ export function Sky({ size }: { size: SkyMode }) {
       {size === 'hero' && (
         <div className="sky-copy">
           <h1 className="sky-headline">Twenty minutes. One&nbsp;real&nbsp;fix.</h1>
-          <p className="sky-lede">Your browser agent finds the gap. You make the call, take the photo, or rewrite the paragraph.</p>
+          <p className="sky-lede">Your browser agent finds the gap. You make the call or take the photo.</p>
         </div>
       )}
 
       {model.panels.length > 0 && (
-        <ol className="sky-legend" aria-label="Campaigns" style={{ gridTemplateColumns: `repeat(${model.panels.length}, minmax(0, 1fr))` }}>
-          {model.panels.map((p) => {
-            const litHere = p.starIndices.filter((i) => litIds.has(model.stars[i].questId)).length;
-            return (
-              <li key={p.campaignId}>
-                <span className="sky-legend-name">{p.name}</span>
-                <span className="sky-legend-count">{litHere} / {p.starIndices.length}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="sky-foot">
+          <ul className="sky-key" aria-label="What a star means">
+            <li><StateChip state="available" /></li>
+            <li><StateChip state="approved" /></li>
+            <li><StateChip state="landed" /></li>
+          </ul>
+          <ol className="sky-legend" aria-label="Campaigns" style={{ gridTemplateColumns: `repeat(${model.panels.length}, minmax(0, 1fr))` }}>
+            {model.panels.map((p) => {
+              const litHere = p.starIndices.filter((i) => litIds.has(model.stars[i].questId)).length;
+              return (
+                <li key={p.campaignId}>
+                  <span className="sky-legend-name">{p.name}</span>
+                  <span className="sky-legend-count">{litHere} / {p.starIndices.length}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
 
       {hoverStar && (

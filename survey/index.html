@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Survey</title>
+    <link rel="stylesheet" href="../src/qt.css" />
+    <link rel="stylesheet" href="survey.css" />
+  </head>
+  <body>
+    <div class="survey-shell">
+      <header class="survey-header">
+        <h1>Survey</h1>
+      </header>
+
+      <div class="survey-handoff-slot">
+        <p class="qt qt-handoff">
+          <span class="qt-handoff-origin" aria-hidden="true"></span>
+          Carried from Quest · check-contribution ready · expires <span class="qt-handoff-time">4:59</span>
+        </p>
+      </div>
+
+      <div class="survey-layout">
+        <main class="survey-main">
+          <h2>Elm Street Library entrance</h2>
+          <p class="hint">Answer what you can see. Leave a field blank if you're not sure.</p>
+
+          <form>
+            <div class="survey-field">
+              <label for="ramp">Does the entrance have a ramp?</label>
+              <select id="ramp" name="ramp">
+                <option value="">Not sure</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="survey-field">
+              <label for="door-width">Door width, in centimeters</label>
+              <input id="door-width" name="door-width" type="number" min="0" placeholder="e.g. 90" />
+            </div>
+            <div class="survey-field">
+              <label for="notes">Notes for the reviewer</label>
+              <textarea id="notes" name="notes" placeholder="Anything else worth flagging"></textarea>
+            </div>
+          </form>
+        </main>
+
+        <aside class="survey-rail">
+          <aside class="qt qt-rack" aria-label="Agent tools">
+            <h2 class="qt-rack-title">Tools available now</h2>
+            <p class="qt-rack-runtime">Agent runtime: none. Manual mode.</p>
+            <ul class="qt-rack-list" aria-live="polite">
+              <li class="qt-tool" data-state="available" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">find-quests</span>
+                <span class="qt-tool-desc">Matches quests to your time and skills.</span>
+              </li>
+              <li class="qt-tool" data-state="available" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">open-quest</span>
+                <span class="qt-tool-desc">Moves you into a quest's workspace.</span>
+              </li>
+              <li class="qt-tool" data-state="new" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">check-contribution</span>
+                <span class="qt-tool-tag">New</span>
+                <span class="qt-tool-desc">Checks your answer before it can be sent.</span>
+              </li>
+              <li class="qt-tool" data-state="locked" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">submit-contribution</span>
+                <span class="qt-tool-desc">Unlocks after check-contribution passes.</span>
+              </li>
+              <li class="qt-tool" data-state="executing" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">approve-contribution</span>
+                <span class="qt-tool-tag">Running</span>
+                <span class="qt-tool-desc">Running approve-contribution…</span>
+              </li>
+              <li class="qt-tool" data-state="removing" tabindex="0">
+                <span class="qt-tool-dot" aria-hidden="true"></span>
+                <span class="qt-tool-name">find-quests</span>
+                <span class="qt-tool-desc">find-quests is no longer needed.</span>
+              </li>
+            </ul>
+            <p class="qt-rack-empty" hidden>No tools right now.</p>
+          </aside>
+        </aside>
+      </div>
+
+      <p class="survey-preview-trigger">
+        <button id="preview-dialog-btn" class="survey-btn" type="button">Preview dialog</button>
+      </p>
+    </div>
+
+    <dialog class="qt qt-confirm" id="qt-confirm" aria-labelledby="qt-confirm-title">
+      <h2 class="qt-confirm-title" id="qt-confirm-title">Send this to a reviewer?</h2>
+      <dl class="qt-confirm-summary">
+        <dt>Opening hours</dt><dd>Mo-Fr 08:00-17:00</dd>
+        <dt>Checked by</dt><dd>Phone call</dd>
+      </dl>
+      <dl class="qt-confirm-meta">
+        <dt>Destination</dt><dd>Quest's review queue</dd>
+        <dt>Visibility</dt><dd>Held for review. Not public yet.</dd>
+        <dt>License</dt><dd>Open Database License (ODbL)</dd>
+      </dl>
+      <p class="qt-confirm-body">A person checks this before it changes anything public. You can edit it again if it's sent back.</p>
+      <p class="qt-confirm-note">This closes on its own if you wait 90 seconds. Nothing is sent until you choose.</p>
+      <div class="qt-confirm-actions">
+        <button class="qt-btn" value="cancel">Keep editing</button>
+        <button class="qt-btn qt-btn-primary" value="confirm">Send for review</button>
+      </div>
+    </dialog>
+
+    <script>
+      var dialog = document.getElementById('qt-confirm');
+      document.getElementById('preview-dialog-btn').addEventListener('click', function () { dialog.showModal(); });
+      dialog.querySelectorAll('.qt-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { dialog.close(btn.value); });
+      });
+    </script>
+  </body>
+</html>

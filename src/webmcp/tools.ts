@@ -15,7 +15,6 @@ export interface FindArgs { minutesAvailable?: number; skills?: string[]; langua
 const SKILL_ALIASES: Record<string, string> = {
   phone: 'phone', call: 'phone', calling: 'phone', talk: 'phone',
   photo: 'photo', photography: 'photo', camera: 'photo', visit: 'visit', walk: 'visit', walking: 'visit', outside: 'visit',
-  writing: 'writing', write: 'writing', editing: 'writing', english: 'writing', translation: 'writing',
 };
 
 export function findQuestsImpl(args: FindArgs): Quest[] {
@@ -44,27 +43,33 @@ export function checkImpl(): { ok: boolean; errors: string[] } {
   const s = getState();
   const q = activeQuest();
   if (!q || !s.draft) return { ok: false, errors: ['No quest is open. Open a quest first.'] };
-  const errors = validate(q, s.draft);
+  const errors = validate(s.draft);
   setState({ checkErrors: errors, workspace: errors.length ? 'in-workspace' : 'checked' });
   return { ok: errors.length === 0, errors };
 }
 
 // ---------- impl: submit (awaits the human click) ----------
 
-let pendingConfirm: ((ok: boolean) => void) | null = null;
+type ConfirmReason = 'confirmed' | 'declined' | 'timeout';
+let pendingConfirm: ((reason: ConfirmReason) => void) | null = null;
 
-export function resolveConfirm(ok: boolean) {
+function settleConfirm(reason: ConfirmReason) {
   setState({ confirmOpen: false });
-  pendingConfirm?.(ok);
+  pendingConfirm?.(reason);
   pendingConfirm = null;
 }
 
-function requestConfirm(timeoutMs = 90_000): Promise<boolean> {
-  if (pendingConfirm) pendingConfirm(false);
+/** Called by the dialog's own buttons and its `onCancel` (Esc, backdrop). */
+export function resolveConfirm(ok: boolean) {
+  settleConfirm(ok ? 'confirmed' : 'declined');
+}
+
+function requestConfirm(timeoutMs = 90_000): Promise<ConfirmReason> {
+  if (pendingConfirm) settleConfirm('declined');
   setState({ confirmOpen: true });
   return new Promise((resolve) => {
-    const t = setTimeout(() => { if (pendingConfirm === resolve) resolveConfirm(false); }, timeoutMs);
-    pendingConfirm = (ok) => { clearTimeout(t); resolve(ok); };
+    const t = setTimeout(() => settleConfirm('timeout'), timeoutMs);
+    pendingConfirm = (reason) => { clearTimeout(t); resolve(reason); };
   });
 }
 
@@ -74,11 +79,11 @@ export async function submitImpl(opts: { viaUi?: boolean } = {}): Promise<Submit
   const q = activeQuest();
   const s = getState();
   if (!q || !s.draft) return { ok: false, reason: 'no-quest' };
-  const errors = validate(q, s.draft);
+  const errors = validate(s.draft);
   if (errors.length) { setState({ checkErrors: errors, workspace: 'in-workspace' }); return { ok: false, reason: 'invalid', errors }; }
   if (!opts.viaUi) {
-    const confirmed = await requestConfirm();
-    if (!confirmed) return { ok: false, reason: 'declined' };
+    const reason = await requestConfirm();
+    if (reason !== 'confirmed') return { ok: false, reason };
   }
   const existing = s.contributions.find((c) => c.questId === q.id && c.status === 'rejected');
   const contribution: Contribution = {
@@ -125,14 +130,14 @@ const fmtQuest = (q: Quest, i: number) =>
 
 export const findQuestsTool: ToolDef = {
   name: 'find-quests',
-  description: 'Find real community micro-tasks near central Bengaluru that fit the time a volunteer has, their skills, and whether they can go out. Each quest fixes one missing fact in OpenStreetMap or rewrites one public help paragraph in plain words. Returns up to five quests with ids. Open one with open-quest.',
+  description: 'Find real community micro-tasks near central Bengaluru that fit the time a volunteer has, their skills, and whether they can go out. Each quest fixes one missing fact in OpenStreetMap. Returns up to five quests with ids. Open one with open-quest.',
   inputSchema: {
     type: 'object',
     properties: {
       minutesAvailable: { type: 'number', description: 'Minutes the volunteer has free right now' },
-      skills: { type: 'array', items: { type: 'string' }, description: 'What they can do: phone, photo, visit, writing' },
+      skills: { type: 'array', items: { type: 'string' }, description: 'What they can do: phone, photo, visit' },
       remoteOnly: { type: 'boolean', description: 'True if the volunteer cannot go outside' },
-      type: { type: 'string', enum: ['verify-hours', 'access-photo', 'plain-rewrite'], description: 'Limit to one quest type' },
+      type: { type: 'string', enum: ['verify-hours', 'access-photo'], description: 'Limit to one quest type' },
     },
   },
   annotations: { readOnlyHint: true, untrustedContentHint: true },
@@ -152,8 +157,7 @@ export const openQuestTool: ToolDef = {
     if (!openQuest(id)) return text(`No quest with id "${id}". Call find-quests to get current ids.`);
     const q = activeQuest()!;
     const how = q.type === 'verify-hours' ? 'The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00".'
-      : q.type === 'access-photo' ? 'The volunteer photographs the entrance and marks wheelchair access yes, limited, or no.'
-      : 'The volunteer rewrites the source paragraph in plain words. Keep every number and name.';
+      : 'The volunteer photographs the entrance and marks wheelchair access yes, limited, or no.';
     return text(`Opened "${q.title}". ${how} The volunteer does this part. When the form is filled, call check-contribution.`);
   },
 };
@@ -178,7 +182,8 @@ export const submitTool: ToolDef = {
     const r = await submitImpl();
     if (r.ok) return text(`Submitted "${r.contribution.questTitle}" for review. A star lights when a reviewer approves it.`);
     if (r.reason === 'invalid') return text(`Not submitted. The form changed. Fix: ${r.errors?.[0]}`);
-    if (r.reason === 'declined') return text('Not submitted. The volunteer chose Keep editing, or did not click in time. Ask them, then call again.');
+    if (r.reason === 'declined') return text('Kept editing. Nothing was sent.');
+    if (r.reason === 'timeout') return text('No response in 90 seconds. Nothing was sent.');
     return text('Not submitted. No quest is open. Call open-quest first.');
   },
 };
@@ -210,4 +215,20 @@ export function syncToolsForState(s: AppState) {
     if (s.workspace === 'checked') names.push('submit-contribution');
   }
   syncTools(ALL, names);
+}
+
+// ---------- rack: locked rows (DESIGN.md §5) ----------
+
+export interface LockedTool { name: string; reason: string }
+
+/** Every operation Quest declares that is not currently registered still has an honest reason
+ *  why not. The rack draws whatever this returns; it holds no product knowledge of its own. */
+const LOCK_REASONS: Record<string, string> = {
+  'check-contribution': 'Unlocks when a quest is open.',
+  'submit-contribution': 'Unlocks after check-contribution passes.',
+};
+
+export function lockedToolsForState(s: AppState): LockedTool[] {
+  if (s.role === 'reviewer') return [];
+  return Object.entries(LOCK_REASONS).map(([name, reason]) => ({ name, reason }));
 }

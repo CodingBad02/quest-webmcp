@@ -25,6 +25,13 @@ interface ModelContext {
 export const hasWebMCP = typeof document !== 'undefined' && 'modelContext' in document;
 const mc = () => (document as unknown as { modelContext: ModelContext }).modelContext;
 
+/** DESIGN.md §7: informational, never a boast, never warn-colored. */
+export function runtimeDescription(): string {
+  if (!hasWebMCP) return 'Agent runtime: none. Manual mode.';
+  const chrome = typeof navigator !== 'undefined' ? navigator.userAgent.match(/Chrome\/(\d+)/) : null;
+  return chrome ? `Agent runtime: Chrome ${chrome[1]}` : 'Agent runtime: detected';
+}
+
 export type RackStatus = 'available' | 'new' | 'executing' | 'removing';
 export interface RackItem { name: string; description: string; status: RackStatus; since: number }
 

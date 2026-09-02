@@ -1,6 +1,5 @@
 import OpeningHours from 'opening_hours';
-import type { ContributionPayload, Quest } from '../types';
-import { checkPlainRewrite } from './plainLanguage';
+import type { ContributionPayload } from '../types';
 
 const NOMINATIM = { address: { country_code: 'in', state: 'Karnataka' } } as unknown as ConstructorParameters<typeof OpeningHours>[1];
 
@@ -16,20 +15,18 @@ export function checkOpeningHours(value: string): string | null {
   }
 }
 
-export function validate(quest: Quest, p: ContributionPayload): string[] {
+export function validate(p: ContributionPayload): string[] {
   const errors: string[] = [];
   if (p.kind === 'verify-hours') {
     const e = checkOpeningHours(p.openingHours); if (e) errors.push(e);
     if (!p.verifiedBy) errors.push('verified_by: choose how you checked: phone, visit, or website.');
     if (p.note.trim().length < 10) errors.push('note: add at least 10 characters on how you confirmed the hours.');
-  } else if (p.kind === 'access-photo') {
+  } else {
     if (!p.imageDataUrl) errors.push('photo: attach a photo of the entrance.');
     else if (!p.imageDataUrl.startsWith('data:image/')) errors.push('photo: the file is not an image.');
     else if (p.imageDataUrl.length > 2_000_000) errors.push('photo: image too large after resize. Try a smaller photo.');
     if (!p.wheelchair) errors.push('wheelchair: choose yes, limited, or no.');
     if (p.wheelchair === 'limited' && p.note.trim().length < 10) errors.push('note: explain what limits access, in at least 10 characters.');
-  } else if (p.kind === 'plain-rewrite') {
-    errors.push(...checkPlainRewrite(quest.sourceText ?? '', p.rewrittenText));
   }
   return errors;
 }

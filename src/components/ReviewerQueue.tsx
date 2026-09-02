@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { setState, useAppState } from '../state/store';
 import { approveImpl, rejectImpl } from '../webmcp/tools';
+import { StateChip } from './StateChip';
 import type { Contribution } from '../types';
 
 const CHECKS: Record<string, string[]> = {
   'verify-hours': ['Hours parse as valid syntax', 'Method of checking is plausible', 'Note is specific', 'No personal data', 'Plausible for this kind of place'],
   'access-photo': ['Photo shows the entrance', 'No faces or number plates', 'Access value matches the photo', 'Note explains "limited"', 'Location fits the quest'],
-  'plain-rewrite': ['Automated checks passed', 'Meaning matches the source', 'No new claims', 'Neutral tone', 'Reads naturally'],
 };
 
 function Item({ c }: { c: Contribution }) {
@@ -21,7 +21,6 @@ function Item({ c }: { c: Contribution }) {
       <div className="review-body">
         {p.kind === 'verify-hours' && <dl><dt>Opening hours</dt><dd><code>{p.openingHours}</code></dd><dt>Checked by</dt><dd>{p.verifiedBy}</dd><dt>Note</dt><dd>{p.note}</dd></dl>}
         {p.kind === 'access-photo' && <><img className="preview" src={p.imageDataUrl} alt="Entrance submitted by volunteer" /><dl><dt>Wheelchair</dt><dd><code>wheelchair={p.wheelchair}</code></dd>{p.note && <><dt>Note</dt><dd>{p.note}</dd></>}</dl></>}
-        {p.kind === 'plain-rewrite' && <blockquote className="source">{p.rewrittenText}</blockquote>}
       </div>
       <ul className="checklist">{CHECKS[p.kind].map((t) => <li key={t}><label><input type="checkbox" /> {t}</label></li>)}</ul>
       <div className="actions">
@@ -37,7 +36,7 @@ export function ReviewerQueue() {
   const contributions = useAppState((s) => s.contributions);
   const profile = useAppState((s) => s.profile);
   const pending = contributions.filter((c) => c.status === 'submitted');
-  const done = contributions.filter((c) => c.status !== 'submitted' && c.status !== 'draft');
+  const done = contributions.filter((c) => c.status !== 'submitted');
 
   return (
     <div className="queue">
@@ -48,7 +47,7 @@ export function ReviewerQueue() {
       <div className="field inline"><label htmlFor="rname">Your first name</label><input id="rname" value={profile.name} placeholder="Tom" maxLength={30} onChange={(e) => setState({ profile: { ...profile, name: e.target.value } })} /></div>
       {pending.length === 0 ? <div className="empty">Nothing waiting. Submissions from the volunteer tab appear here live.</div> : <ul className="reviews">{pending.map((c) => <Item key={c.id} c={c} />)}</ul>}
       {done.length > 0 && (
-        <div className="mine"><h2>Reviewed</h2><ul>{done.map((c) => <li key={c.id} className={`mine-item status-${c.status}`}><span className="status">{c.status}</span> {c.questTitle} · {c.volunteerName}</li>)}</ul></div>
+        <div className="mine"><h2>Reviewed</h2><ul>{done.map((c) => <li key={c.id} className="mine-item"><StateChip state={c.status} /> {c.questTitle} · {c.volunteerName}</li>)}</ul></div>
       )}
     </div>
   );

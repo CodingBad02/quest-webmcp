@@ -1,31 +1,37 @@
 import { useEffect, useState } from 'react';
-import { hasWebMCP, useRack, type RackItem } from '../webmcp/registry';
+import { runtimeDescription, useRack, type RackItem } from '../webmcp/registry';
+import { lockedToolsForState, type LockedTool } from '../webmcp/tools';
 import { useAppState } from '../state/store';
 
-const LOCKED: Record<string, { after: string; when: string }> = {
-  'check-contribution': { after: 'open-quest', when: 'Unlocks when a quest is open' },
-  'submit-contribution': { after: 'check-contribution', when: 'Unlocks after check-contribution passes' },
+const LABEL: Record<string, string> = {
+  'find-quests': 'Matches quests to your time and skills.',
+  'open-quest': 'Opens a quest workspace.',
+  'check-contribution': 'Checks the form. Says what to fix.',
+  'submit-contribution': 'Sends to a reviewer. Waits for your click.',
+  'approve-contribution': 'Approves one submission. Lights a star.',
 };
 
-const LABEL: Record<string, string> = {
-  'find-quests': 'Match quests to time and skills',
-  'open-quest': 'Open a quest workspace',
-  'check-contribution': 'Check the form. Say what to fix',
-  'submit-contribution': 'Send to a reviewer. Waits for your click',
-  'approve-contribution': 'Approve one submission. Light a star',
-};
+const TAG: Record<string, string> = { new: 'New', executing: 'Running' };
 
 function Item({ r }: { r: RackItem }) {
+  const tag = TAG[r.status];
+  const desc = r.status === 'removing' ? 'No longer needed.' : r.status === 'executing' ? `Running ${r.name}…` : LABEL[r.name] ?? r.description;
   return (
-    <li className={`tool tool-${r.status}`} tabIndex={0} aria-label={`${r.name}: ${r.status}`}>
-      <span className="tool-dot" aria-hidden="true" />
-      <div className="tool-body">
-        <div className="tool-row">
-          <code className="tool-name">{r.name}</code>
-          {r.status === 'new' && <span className="tool-tag">New</span>}
-        </div>
-        <span className="tool-desc">{r.status === 'executing' ? 'Running…' : r.status === 'removing' ? 'No longer needed' : LABEL[r.name] ?? r.description}</span>
-      </div>
+    <li className="qt-tool" data-state={r.status} tabIndex={0} aria-label={`${r.name}: ${r.status}`}>
+      <span className="qt-tool-dot" aria-hidden="true" />
+      <span className="qt-tool-name">{r.name}</span>
+      {tag && <span className="qt-tool-tag">{tag}</span>}
+      <span className="qt-tool-desc">{desc}</span>
+    </li>
+  );
+}
+
+function LockedItem({ l }: { l: LockedTool }) {
+  return (
+    <li className="qt-tool" data-state="locked" tabIndex={0} aria-label={`${l.name}: locked. ${l.reason}`}>
+      <span className="qt-tool-dot" aria-hidden="true" />
+      <span className="qt-tool-name">{l.name}</span>
+      <span className="qt-tool-desc">{l.reason}</span>
     </li>
   );
 }
@@ -33,11 +39,12 @@ function Item({ r }: { r: RackItem }) {
 export function CapabilityRack() {
   const [open, setOpen] = useState(false);
   const rack = useRack();
-  const role = useAppState((s) => s.role);
+  const state = useAppState((s) => s);
   const live = new Set(rack.map((r) => r.name));
-  const locked = role === 'volunteer' ? Object.entries(LOCKED).filter(([n]) => !live.has(n)) : [];
-  const empty = role === 'reviewer' && rack.length === 0;
+  const locked = lockedToolsForState(state).filter((l) => !live.has(l.name));
   const count = rack.filter((r) => r.status !== 'removing').length;
+  const empty = rack.length === 0 && locked.length === 0;
+  const emptyMessage = state.role === 'reviewer' ? 'approve-contribution appears when something is waiting for review.' : 'No tools right now.';
 
   useEffect(() => {
     if (!open) return;
@@ -52,34 +59,18 @@ export function CapabilityRack() {
         {count} {count === 1 ? 'tool' : 'tools'} ready
       </button>
       <button className={`rack-backdrop ${open ? 'open' : ''}`} type="button" aria-label="Close agent tools" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)} />
-      <div id="capability-rack" className={`rack ${open ? 'rack-open' : ''}`}>
-        <div className="rack-head">
-          <h2>What the agent can do now</h2>
-          <span className="rack-count">{count}</span>
-          <button className="rack-close" type="button" aria-label="Close agent tools" onClick={() => setOpen(false)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
-        <p className="rack-sub">
-          {hasWebMCP ? 'Tools registered with the browser. They appear when the page state allows them.' : 'WebMCP is off in this browser. The same actions work from the buttons.'}
-        </p>
-        <ul className="rack-list" aria-live="polite" aria-relevant="all">
+      <aside id="capability-rack" className={`qt qt-rack rack ${open ? 'rack-open' : ''}`} aria-label="Agent tools">
+        <button className="rack-close" type="button" aria-label="Close agent tools" onClick={() => setOpen(false)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
+        <h2 className="qt-rack-title">Tools available now</h2>
+        <p className="qt-rack-runtime">{runtimeDescription()}</p>
+        <ul className="qt-rack-list" aria-live="polite">
           {rack.map((r) => <Item key={r.name} r={r} />)}
-          {locked.map(([name, l]) => (
-            <li key={name} className="tool tool-locked" tabIndex={0} aria-label={`${name}: locked. ${l.when}`}>
-              <span className="tool-dot" aria-hidden="true" />
-              <div className="tool-body">
-                <div className="tool-row">
-                  <code className="tool-name">{name}</code>
-                  <svg className="tool-lock" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2Zm-8-2a3 3 0 0 1 6 0v2H9V7Z" /></svg>
-                </div>
-                <span className="tool-desc">{l.when}</span>
-              </div>
-            </li>
-          ))}
-          {empty && <li className="tool tool-empty">approve-contribution appears when something is waiting for review.</li>}
+          {locked.map((l) => <LockedItem key={l.name} l={l} />)}
         </ul>
-      </div>
+        <p className="qt-rack-empty" hidden={!empty}>{emptyMessage}</p>
+      </aside>
     </>
   );
 }

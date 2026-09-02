@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { activeQuest, closeQuest, updateDraft, useAppState } from '../state/store';
 import { checkImpl, submitImpl } from '../webmcp/tools';
-import { fleschKincaid } from '../validators/plainLanguage';
+import { StateChip } from './StateChip';
 import type { ContributionPayload } from '../types';
 
 async function resizeImage(file: File): Promise<string> {
@@ -35,11 +35,9 @@ export function Workspace() {
       <div className="section-head">
         <h1>{q.placeName}</h1>
         <p className="muted">
-          <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : q.type === 'access-photo' ? 'Step-free entry' : 'Plain rewrite'}</span>
+          <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : 'Step-free entry'}</span>
           {q.address && <span>{q.address}</span>}
           {q.osmLink && <a href={q.osmLink} target="_blank" rel="noreferrer">View on OpenStreetMap</a>}
-          {q.sourceUrl && <a href={q.sourceUrl} target="_blank" rel="noreferrer">Source page</a>}
-          {q.sourceLicense && <span>{q.sourceLicense}</span>}
         </p>
       </div>
 
@@ -79,17 +77,6 @@ export function Workspace() {
             <div className="field"><label htmlFor="note2">Notes {draft.wheelchair === 'limited' && '(required for limited)'}</label><textarea id="note2" rows={2} value={draft.note} placeholder="One 8 cm step at the door. Staff bring a ramp if asked." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
           </>
         )}
-        {draft.kind === 'plain-rewrite' && (
-          <>
-            <p className="help">Rewrite the paragraph so a 13-year-old understands it. Short sentences. Common words. Keep every number and name.</p>
-            <blockquote className="source">{q.sourceText}</blockquote>
-            <div className="field">
-              <label htmlFor="rw">Your plain version</label>
-              <textarea id="rw" rows={7} value={draft.rewrittenText} onChange={(e) => set({ ...draft, rewrittenText: e.target.value })} />
-              <Meter text={draft.rewrittenText} />
-            </div>
-          </>
-        )}
       </fieldset>
 
       {errors.length > 0 && (
@@ -99,11 +86,11 @@ export function Workspace() {
       <div className="actions">
         {ws === 'in-workspace' && <button className="btn" onClick={() => checkImpl()}>Check</button>}
         {ws === 'checked' && (<>
-          <span className="ok">Ready. All checks passed.</span>
+          <StateChip state="checked" pulse />
           <button className="btn primary" onClick={() => submitImpl({ viaUi: true })}>Send for review</button>
         </>)}
-        {ws === 'submitted' && <span className="ok">Sent to a reviewer. You will see it here when it is checked.</span>}
-        {ws === 'approved' && <span className="ok">Approved. Your star is lit.</span>}
+        {ws === 'submitted' && (<><StateChip state="submitted" pulse /><span className="muted">You will see it here when it is checked.</span></>)}
+        {ws === 'approved' && <StateChip state="approved" pulse />}
       </div>
     </div>
   );
@@ -117,16 +104,5 @@ function Step({ n, label, state }: { n: number; label: string; state: '' | 'on' 
       </span>
       <span className="step-label">{label}</span>
     </li>
-  );
-}
-
-function Meter({ text }: { text: string }) {
-  const g = text.trim() ? fleschKincaid(text) : 0;
-  const pct = Math.min(100, Math.max(0, (g / 16) * 100));
-  return (
-    <div className="meter" aria-label={`Reading grade ${g.toFixed(1)}`}>
-      <div className="meter-bar"><span style={{ transform: `scaleX(${pct / 100})` }} className={g > 8 ? 'high' : ''} /></div>
-      <span className="meter-label">{text.trim() ? `Grade ${g.toFixed(1)} ${g > 8 ? '· aim for 8 or lower' : '· good'}` : 'Reading grade shows here'}</span>
-    </div>
   );
 }

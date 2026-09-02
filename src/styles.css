@@ -1,3 +1,7 @@
+/* qt.css (DESIGN.md §2) ships the portable rack/dialog tokens and their component styles.
+ * It must load first so Quest's own skin below can win the cascade. */
+@import './qt.css';
+
 :root {
   /* Paper. Warm and quiet so the cold indigo sky above it reads as a different world. */
   --bg: #f5f4ef; --surface: #ffffff; --surface-2: #f0efe9; --surface-3: #e6e5de; --text: #1a1a18; --muted: #5d5d58; --border: #dcdbd3;
@@ -17,10 +21,39 @@
   color-scheme: light dark;
   interpolate-size: allow-keywords;
 }
+
+/* Quest's skin, mapped onto the portable --qt-* contract (DESIGN.md §3). Only two overrides:
+ * the page-level background (warm paper — the rack itself stays on the neutral default surface)
+ * and the interface font. Everything else keeps qt.css's system defaults.
+ * qt.css declares its tokens directly on `.qt` (not inherited from :root), so the override has to
+ * repeat on `.qt` to actually reach the rack and dialog, not just on `:root` for the rest of the page. */
+:root, .qt {
+  --qt-color-bg: var(--bg);
+  --qt-font-ui: var(--sans);
+}
+
 @media (prefers-color-scheme: dark) {
   :root { --bg: #111216; --surface: #191a1f; --surface-2: #21222a; --surface-3: #2a2b34; --text: #ecedf1; --muted: #a9adb8; --border: #2c2e37;
     --accent: #6fcf97; --accent-ink: #0d1f16; --info: #b3bccf; --warn: #d8b25c; --danger: #f2867a;
     --shadow: none; --shadow-dialog: none; --dialog-border: var(--border); }
+
+  /* Every --qt-color-* token remapped for dark (DESIGN.md §3, §13). See DESIGN.md §3's
+   * "Dark token values (Quest)" table for the values below. */
+  :root, .qt {
+    --qt-color-bg: var(--bg);
+    --qt-color-surface: var(--surface);
+    --qt-color-surface-2: var(--surface-2);
+    --qt-color-surface-3: var(--surface-3);
+    --qt-color-border: var(--border);
+    --qt-color-text: var(--text);
+    --qt-color-text-muted: var(--muted);
+    --qt-color-accent: var(--accent);
+    --qt-color-accent-ink: var(--accent-ink);
+    --qt-color-info: var(--info);
+    --qt-color-warn: var(--warn);
+    --qt-color-danger: var(--danger);
+    --qt-color-focus: var(--accent);
+  }
 }
 
 * { box-sizing: border-box; }
@@ -44,11 +77,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; color: var(--sky-ink); text-decoration: none; font-size: 17px; letter-spacing: -.012em; }
 .brand svg { color: var(--star-lit); }
 .spacer { flex: 1; }
+/* One neutral pill, no ad hoc color variants (DESIGN.md §0, §7): where quests come from and the
+ * runtime line are both informational, never a warning. */
 .pill { display: inline-flex; align-items: center; min-height: 30px; font-size: 13px; line-height: 1.3; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sky-line); color: var(--sky-muted); background: transparent; white-space: nowrap; text-decoration: none; font-weight: 500; font-variant-numeric: tabular-nums; transition: color 180ms var(--ease-out), background 180ms var(--ease-out), border-color 180ms var(--ease-out); }
 .pill.link { color: var(--sky-ink); border-color: rgba(238,241,248,.22); }
 .pill.link:hover { background: var(--sky-fill); border-color: rgba(238,241,248,.4); }
-.pill.warn { color: #e2b95f; border-color: rgba(226,185,95,.4); }
-.pill.source-live { color: #9fdcb9; border-color: rgba(159,220,185,.35); }
 
 /* ---------- The sky ---------- */
 .sky-root { position: relative; isolation: isolate; overflow: hidden; background: var(--sky); color: var(--sky-ink); border-bottom: 1px solid var(--sky-line); }
@@ -68,21 +101,29 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sky-headline { font-family: var(--serif); font-variation-settings: "opsz" 144; font-weight: 400; font-size: clamp(38px, 3.9vw, 60px); line-height: 1.02; letter-spacing: -.022em; margin: 0 0 16px; max-width: 15ch; text-wrap: balance; color: var(--sky-ink); text-shadow: 0 2px 28px rgba(7,9,18,.7); }
 .sky-lede { font-size: 17px; line-height: 1.5; color: var(--sky-muted); max-width: 50ch; margin: 0; text-shadow: 0 1px 18px rgba(7,9,18,.8); }
 
-.sky-legend { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 0 var(--gutter) 20px; list-style: none; display: grid; gap: 40px; pointer-events: none; }
-.sky-band .sky-legend { padding-bottom: 12px; }
+.sky-foot { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 0 var(--gutter) 20px; display: grid; gap: 12px; pointer-events: none; }
+.sky-band .sky-foot { padding-bottom: 12px; }
+.sky-legend { margin: 0; padding: 0; list-style: none; display: grid; gap: 40px; }
 .sky-legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; font-size: 13px; line-height: 18px; }
 .sky-legend-name { color: var(--sky-ink); font-weight: 500; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .sky-legend-count { flex: none; color: var(--sky-muted); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* What a star means (DESIGN.md §4, §8): the chip's circle family, gold instead of accent. */
+.sky-key { margin: 0; padding: 0; list-style: none; display: flex; gap: 20px; }
+.sky-band .sky-key { display: none; }
+.sky-key .state-chip { color: var(--sky-muted); }
+.sky-key .state-chip-glyph { --sc-color: var(--star-lit); color: var(--star-lit); }
+.sky-key .state-chip-label { font-size: 12px; }
 
 .sky-tip { position: absolute; z-index: 2; transform: translate(-50%, calc(-100% - 16px)); display: grid; gap: 2px; max-width: 260px; padding: 9px 13px; border-radius: 8px; background: rgba(12,17,34,.94); border: 1px solid rgba(238,241,248,.14); box-shadow: 0 12px 32px -10px rgba(7,9,18,.7); font-size: 13px; line-height: 1.4; color: var(--sky-muted); pointer-events: none; animation: fade 140ms var(--ease-out); }
 .sky-tip strong { color: var(--sky-ink); font-weight: 500; }
 .sky-tip span { white-space: nowrap; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* ---------- Layout ---------- */
-.layout { width: 100%; flex: 1; display: grid; grid-template-columns: minmax(0, 760px) 320px; gap: 24px; padding: 36px 24px 72px; justify-content: center; align-items: start; }
+/* ---------- Layout (DESIGN.md §12) ---------- */
+.layout { width: 100%; flex: 1; display: grid; grid-template-columns: minmax(680px, 760px) 320px; gap: 24px; padding: 36px 24px 72px; justify-content: center; align-items: start; }
 .work { min-width: 0; }
-@media (max-width: 1280px) { .layout { grid-template-columns: minmax(0, 1fr) 280px; } }
+@media (max-width: 1280px) { .layout { grid-template-columns: minmax(560px, 1fr) 280px; } }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .rack-col { order: 2; } }
 
 .section-head { margin-bottom: 24px; }
@@ -132,8 +173,25 @@ textarea { resize: vertical; }
 .questlist > .small { margin-top: 10px; }
 .mine ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .mine-item { font-size: 14px; display: flex; gap: 10px; align-items: baseline; }
-.status { display: inline-block; min-width: 76px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
-.status-approved .status { color: var(--accent); } .status-rejected .status { color: var(--danger); }
+
+/* ---------- State chip (DESIGN.md §4): one glyph + label for the ten envelope states.
+   Not part of qt.css — this is Quest's own component, built from the same --qt-* tokens
+   (with light-mode fallbacks) so a state looks identical everywhere a volunteer sees it. ---------- */
+.state-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--sc-color); white-space: nowrap; }
+.state-chip-glyph { flex: none; display: block; color: var(--sc-color); }
+.state-chip[data-state="available"] { --sc-color: var(--qt-color-text-muted, #5B5B57); }
+.state-chip[data-state="open"] { --sc-color: var(--qt-color-info, #2A5C99); }
+.state-chip[data-state="checked"] { --sc-color: var(--qt-color-accent, #2F6F4F); }
+.state-chip[data-state="submitted"] { --sc-color: var(--qt-color-info, #2A5C99); }
+.state-chip[data-state="approved"] { --sc-color: var(--qt-color-accent, #2F6F4F); }
+.state-chip[data-state="landed"] { --sc-color: var(--qt-color-gold, #FFD166); }
+.state-chip[data-state="invalid"] { --sc-color: var(--qt-color-danger, #B3261E); }
+.state-chip[data-state="declined"] { --sc-color: var(--qt-color-warn, #B45309); }
+.state-chip[data-state="rejected"] { --sc-color: var(--qt-color-danger, #B3261E); }
+.state-chip[data-state="stale"] { --sc-color: var(--qt-color-warn, #B45309); }
+/* One pulse, 400ms, ease-out — the volunteer's own latest contribution (DESIGN.md §4). */
+.state-chip-pulse { animation: chip-pulse 400ms var(--qt-ease-out, cubic-bezier(.2,.8,.2,1)); }
+@keyframes chip-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 
 /* ---------- Workspace ---------- */
 .workspace, .queue { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
@@ -155,56 +213,22 @@ textarea { resize: vertical; }
 .form { border: 0; padding: 0; margin: 0; }
 .form:disabled { opacity: .72; }
 .help { color: var(--muted); font-size: 14px; line-height: 1.55; margin-bottom: 14px; max-width: 70ch; }
-.source { margin: 0 0 20px; padding: 16px 18px; background: var(--surface-2); border-radius: var(--r-m); color: var(--text); font-size: 15px; line-height: 1.55; }
 .preview { display: block; max-width: 320px; max-height: 240px; border-radius: var(--r-s); margin-top: 8px; border: 1px solid var(--border); }
-.meter { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
-.meter-label { font-variant-numeric: tabular-nums; }
-.meter-bar { flex: 1; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
-.meter-bar span { display: block; width: 100%; height: 100%; background: var(--accent); transform-origin: left; transition: transform 240ms var(--ease-out), background 240ms var(--ease-out); }
-.meter-bar span.high { background: var(--warn); }
 .errors { margin: 0 0 14px; padding: 12px 16px 12px 32px; border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); border-radius: var(--r-s); color: var(--danger); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); font-size: 14px; line-height: 1.5; }
 .errors li + li { margin-top: 4px; }
 .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
 .actions .grow { flex: 1; min-width: 180px; }
-.ok { color: var(--accent); font-weight: 500; }
 .btn { min-height: 44px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 500; line-height: 1.3; transition: color 220ms var(--ease-out), background 220ms var(--ease-out), border-color 220ms var(--ease-out), transform 220ms var(--ease-out); }
 .btn:hover { background: var(--surface-2); border-color: color-mix(in srgb, var(--muted) 45%, var(--border)); }
 .btn:active { transform: scale(.98); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); border-color: color-mix(in srgb, var(--accent) 88%, var(--text)); }
 
-/* ---------- Capability rack: the machine panel. Flat, hairline, mono, exact. ---------- */
-.rack { position: sticky; top: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px 18px 16px; }
-.rack-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.rack-head h2 { font-family: var(--sans); font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.01em; font-variation-settings: normal; }
-.rack-count { font-family: var(--mono); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; border: 1px solid var(--border); min-width: 24px; text-align: center; padding: 2px 7px; border-radius: 4px; color: var(--muted); }
-.rack-sub { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 6px 0 14px; }
-.rack-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; }
-.rack-list > li + li { border-top: 1px solid var(--border); }
-.tool { display: grid; grid-template-columns: 12px minmax(0, 1fr); column-gap: 10px; align-items: start; padding: 12px 13px; border-radius: 0; border: 0; background: var(--surface); position: relative; animation: slidein 240ms var(--ease-out) both; transition: background 220ms var(--ease-out), opacity 220ms var(--ease-out); }
-.tool:focus-visible { outline-offset: -3px; }
-.tool-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin: 7px 2px 0; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
-.tool-body { display: grid; gap: 3px; min-width: 0; }
-.tool-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.tool-name { font-family: var(--mono); font-size: 13.5px; font-weight: 500; letter-spacing: -.01em; line-height: 1.4; overflow-wrap: anywhere; color: var(--text); }
-.tool-desc { font-size: 13px; line-height: 1.4; color: var(--muted); }
-.tool-tag { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 4px; padding: 1px 6px; line-height: 1.5; flex: none; }
-.tool-new { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); animation: slidein 240ms var(--ease-out) both, ring 600ms var(--ease-out) 240ms 2; }
-.tool-executing { background: var(--surface-2); }
-.tool-executing .tool-dot { width: 12px; height: 12px; margin: 5px 0 0; background: transparent; box-shadow: none; border: 2px solid color-mix(in srgb, var(--accent) 28%, transparent); border-top-color: var(--accent); animation: spin 1200ms linear infinite; }
-.tool-executing .tool-desc { color: var(--text); }
-.tool-locked { animation: none; background: var(--surface-2); }
-.tool-locked .tool-dot { background: transparent; box-shadow: none; border: 1.5px solid var(--border); }
-.tool-locked .tool-name, .tool-lock { color: var(--muted); }
-.tool-lock { flex: none; }
-.tool-empty { display: block; font-size: 13px; line-height: 1.45; color: var(--muted); animation: none; background: var(--surface-2); }
-.tool-removing { opacity: 0; overflow: hidden; pointer-events: none; animation: fadeout 200ms var(--ease-in) both, collapse 260ms var(--ease-in) 200ms both; }
+/* ---------- Capability rack: Quest's layout wrapper around the portable .qt-rack (qt.css owns
+   the machine-panel look itself — background, border, row states, timings; DESIGN.md §2, §5).
+   `.qt-rack.rack` matches qt.css's own `.qt.qt-rack` specificity so this position override wins. */
+.qt-rack.rack { position: sticky; top: 24px; }
 .rack-trigger, .rack-backdrop, .rack-close { display: none; }
-@keyframes slidein { from { transform: translateX(14px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeout { from { opacity: 1; } to { opacity: 0; } }
-@keyframes collapse { from { height: auto; } to { height: 0; padding-top: 0; padding-bottom: 0; border-top-width: 0; border-bottom-width: 0; margin-bottom: -8px; } }
 
 /* ---------- Reviewer ---------- */
 .reviews { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
@@ -219,15 +243,8 @@ textarea { resize: vertical; }
 .checklist label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .checklist input { margin: 0; accent-color: var(--accent); }
 
-/* ---------- Confirm dialog ---------- */
-dialog.confirm { width: min(480px, calc(100vw - 32px)); border: 1px solid var(--dialog-border); border-radius: 14px; padding: 32px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-dialog); }
-dialog.confirm::backdrop { background: rgba(7,9,18,.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-dialog.confirm[open] { animation: rise 200ms var(--ease-out); }
-dialog.confirm[open]::backdrop { animation: fade 200ms var(--ease-out); }
-dialog.confirm h2 { font-size: 27px; letter-spacing: -.02em; margin: 0 0 10px; }
-dialog.confirm p { line-height: 1.55; }
-dialog.confirm .body { color: var(--text); margin: 0 0 22px; }
-dialog.confirm .actions { justify-content: flex-end; margin-top: 0; }
+/* The confirmation dialog is `.qt.qt-confirm` (qt.css); its markup and copy live in
+   ConfirmModal.tsx per DESIGN.md §5a, §6. Nothing Quest-specific to add here. */
 @keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- Toast ---------- */
@@ -237,7 +254,6 @@ dialog.confirm .actions { justify-content: flex-end; margin-top: 0; }
 /* ---------- Reduced motion (DESIGN.md §9): nothing loops, nothing slides ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 120ms !important; }
-  .tool-executing .tool-dot { border: 0; background: var(--accent); width: 8px; height: 8px; margin: 7px 2px 0; }
   .card:hover { transform: none; }
 }
 
@@ -246,12 +262,19 @@ dialog.confirm .actions { justify-content: flex-end; margin-top: 0; }
   .layout { grid-template-columns: 1fr; padding: 24px 16px 48px; }
   .rack-col { order: 2; }
   .topbar { padding-right: 118px; }
+  .sky-hero { height: 46vh; min-height: 360px; }
+  .sky-band { height: 96px; }
+  .sky-hero .sky-key { display: none; }
+  .sky-legend { gap: 16px; }
+  .sky-legend li { flex-wrap: nowrap; }
   .rack-trigger { position: fixed; top: 12px; right: 16px; z-index: 3; display: inline-flex; align-items: center; min-height: 32px; padding: 5px 12px; border: 1px solid rgba(238,241,248,.22); border-radius: 999px; background: var(--sky-fill); color: var(--sky-ink); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.3; cursor: pointer; }
   .rack-backdrop { position: fixed; inset: 0; z-index: 3; display: block; border: 0; background: rgba(7,9,18,.5); opacity: 0; pointer-events: none; transition: opacity 220ms var(--ease-out); }
   .rack-backdrop.open { opacity: 1; pointer-events: auto; }
-  .rack { position: fixed; z-index: 4; inset: auto 0 0; top: auto; max-height: min(72dvh, 620px); overflow: auto; border-radius: var(--r-l) var(--r-l) 0 0; padding: 22px 20px max(22px, env(safe-area-inset-bottom)); visibility: hidden; pointer-events: none; transform: translateY(105%); transition: transform 260ms var(--ease-out), visibility 0s linear 260ms; }
+  /* Bottom-sheet chrome layered on the portable rack. `.qt-rack.rack` matches qt.css's own
+     `.qt.qt-rack` specificity so these overrides (position, corners, safe-area padding) win. */
+  .qt-rack.rack { position: fixed; z-index: 4; inset: auto 0 0; top: auto; max-height: min(72dvh, 620px); overflow: auto; visibility: hidden; pointer-events: none; transform: translateY(105%); transition: transform 260ms var(--ease-out), visibility 0s linear 260ms; border-radius: var(--r-l) var(--r-l) 0 0; padding: 22px 20px max(22px, env(safe-area-inset-bottom)); }
   .rack.rack-open { visibility: visible; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
-  .rack-close { display: grid; place-items: center; width: 36px; height: 36px; margin: -8px -8px -8px 0; padding: 0; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--text); cursor: pointer; }
+  .rack-close { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--text); cursor: pointer; }
   .sky-legend { gap: 16px; }
   .sky-legend li { flex-direction: column; gap: 2px; font-size: 12px; line-height: 16px; }
   .sky-legend-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -261,8 +284,7 @@ dialog.confirm .actions { justify-content: flex-end; margin-top: 0; }
 @media (max-width: 640px) {
   .topbar { gap: 8px; overflow-x: auto; scrollbar-width: none; }
   .topbar::-webkit-scrollbar { display: none; }
-  .topbar .source-live, .topbar .source-cached, .topbar .source-fallback, .topbar .source-loading { display: none; }
-  .topbar .warn { display: none; }
+  .topbar .pill-source { display: none; }
   .brand { margin-right: auto; }
   .profile { grid-template-columns: 1fr; padding: 18px; margin-bottom: 28px; }
   .profile .field.chips { grid-column: 1; align-items: flex-start; }
@@ -277,8 +299,5 @@ dialog.confirm .actions { justify-content: flex-end; margin-top: 0; }
   .field.inline { align-items: stretch; flex-direction: column; }
   .review dl { grid-template-columns: 1fr; gap: 2px; }
   .review dd + dt { margin-top: 8px; }
-  dialog.confirm { padding: 26px 22px 22px; }
-  dialog.confirm .actions { align-items: stretch; flex-direction: column-reverse; }
-  dialog.confirm .btn { width: 100%; }
 }
 .list-title { font-size: 28px; }
