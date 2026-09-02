@@ -224,6 +224,52 @@ const exchangeAgain = await fetch(`${STORE}/api/handoffs/exchange`, {
 });
 check('15. Exchanging the same handoff a second time returns 410', exchangeAgain.status === 410, String(exchangeAgain.status));
 
+// ---------- Wikidata adapter: cite-claim (SPEC.md P0-last Wikidata) ----------
+
+await vol.bringToFront();
+const foundCite = await call(vol, 'find-quests', { type: 'cite-claim' });
+check('16. find-quests returns a cite-claim quest', foundCite.startsWith('Found') && /\[cite-claim\]/.test(foundCite), foundCite.split('\n')[1]?.slice(0, 80));
+const citeId = foundCite.match(/id=(\S+)/)?.[1];
+
+const openedCite = await call(vol, 'open-quest', { id: citeId });
+await vol.waitForSelector('#sourceUrl');
+const openedCiteEnvelope = envelope(openedCite);
+check('17. open-quest opens the cite-claim workspace', openedCiteEnvelope.state === 'open' && openedCiteEnvelope.questId === citeId, JSON.stringify(openedCiteEnvelope));
+
+const invalidCite = await call(vol, 'check-contribution');
+check('18. check-contribution on the empty cite-claim form reports three errors', invalidCite.startsWith('Not ready') && /source_url/.test(invalidCite) && /quote/.test(invalidCite) && /confirmed/.test(invalidCite), invalidCite.split('\n').slice(0, 4).join(' | '));
+
+await vol.fill('#sourceUrl', 'https://example.com/');
+await vol.fill('#quote', 'The page states the figure clearly in its history section.');
+await vol.check('#confirmed');
+await vol.screenshot({ path: `${SHOTS}/11-cite-claim-workspace.png` });
+const readyCite = await call(vol, 'check-contribution');
+check('19. check-contribution passes for a valid source (live urlcheck + Wikidata claim check)', readyCite.startsWith('Ready'), readyCite.split('\n')[0]);
+const namesCite = await toolNames(vol);
+check('20. submit-contribution appears for the cite-claim quest', namesCite.includes('submit-contribution'), namesCite.join(','));
+
+const citeSubmitPromise = call(vol, 'submit-contribution');
+await vol.waitForSelector('dialog.qt-confirm[open]', { timeout: 5000 });
+await vol.click('dialog.qt-confirm .qt-btn-primary');
+const submittedCite = await citeSubmitPromise;
+const submittedCiteEnvelope = envelope(submittedCite);
+check('21. submit-contribution succeeds for the cite-claim quest', submittedCite.startsWith('Submitted') && Boolean(submittedCiteEnvelope.contributionId), submittedCite.slice(0, 70));
+
+await rev.bringToFront();
+const pendingIdsCite = await waitForPendingId(rev, submittedCiteEnvelope.contributionId, 5000);
+check('22. the cite-claim submission reaches the reviewer queue', pendingIdsCite.includes(submittedCiteEnvelope.contributionId), `pending=${pendingIdsCite.length}`);
+const approvedCite = await call(rev, 'approve-contribution', { contributionId: submittedCiteEnvelope.contributionId, comment: 'Reliable source. Thanks.' });
+check('23. approve-contribution approves the cite-claim submission', approvedCite.startsWith('Approved'), approvedCite.slice(0, 70));
+
+await vol.bringToFront();
+await vol.click('.back');
+await vol.waitForSelector('.kg-svg', { timeout: 5000 });
+await vol.waitForTimeout(400);
+const kgApproved = await vol.$$eval('.kg-claim[data-state="approved"]', (els) => els.length);
+check('24. the volunteer home knowledge graph shows an approved edge', kgApproved >= 1, `approved edges=${kgApproved}`);
+await vol.locator('.kg-svg').scrollIntoViewIfNeeded();
+await vol.screenshot({ path: `${SHOTS}/10-knowledge-graph.png` });
+
 // Dark mode shot.
 const dark = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
 const dp = await dark.newPage(); await dp.goto(BASE); await dp.waitForSelector('.cards .card, .empty'); await dp.screenshot({ path: `${SHOTS}/09-dark.png` });

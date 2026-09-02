@@ -55,6 +55,8 @@ export interface PlacedLayout {
 export const GAP_TEXT: Record<QuestType, string> = {
   'access-photo': 'no wheelchair tag',
   'verify-hours': 'no opening hours',
+  // cite-claim never reaches the geo sky (it has no coordinates); kept for Record exhaustiveness.
+  'cite-claim': 'no source cited',
 };
 
 export function rng(seed: string) {

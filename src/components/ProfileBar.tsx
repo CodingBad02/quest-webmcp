@@ -1,6 +1,6 @@
 import { setState, useAppState } from '../state/store';
 
-const SKILLS = ['phone', 'photo', 'visit'];
+const SKILLS = ['phone', 'photo', 'visit', 'research'];
 
 export function ProfileBar() {
   const profile = useAppState((s) => s.profile);

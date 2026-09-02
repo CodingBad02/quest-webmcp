@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { getState, loadContributionsFromStore, setState, subscribe, toast, useAppState } from './state/store';
 import { buildCampaigns, loadQuests } from './data/overpass';
+import { buildWikidataCampaigns, loadWikidataQuests } from './data/wikidata';
 import { onQuestEvent } from './channel/broadcast';
 import { controller } from './webmcp/tools';
 import { CapabilityRack } from './components/CapabilityRack';
 import { QuestList } from './components/QuestList';
+import { KnowledgeGraph } from './components/KnowledgeGraph';
 import { Workspace } from './components/Workspace';
 import { ReviewerQueue } from './components/ReviewerQueue';
 import { Sky } from './components/Sky';
@@ -17,8 +19,13 @@ export default function App() {
   const toastMsg = useAppState((s) => s.toast);
 
   useEffect(() => {
-    loadQuests().then(({ quests, source }) => {
-      setState({ quests, campaigns: buildCampaigns(quests), questSource: source });
+    Promise.all([loadQuests(), loadWikidataQuests()]).then(([osm, wd]) => {
+      setState({
+        quests: [...osm.quests, ...wd.quests],
+        campaigns: buildCampaigns(osm.quests),
+        wdCampaigns: buildWikidataCampaigns(wd.quests),
+        questSource: osm.source,
+      });
       controller.refresh();
     });
     loadContributionsFromStore();
@@ -29,7 +36,8 @@ export default function App() {
       const s = getState();
       if (e.type === 'contribution:approved' && s.role === 'volunteer') {
         const c = s.contributions.find((x) => x.id === e.contributionId);
-        toast(`${e.reviewerName} approved your work on ${c?.questTitle.replace(/^.*?: /, '') ?? 'a quest'}. A star lit up.`);
+        const lit = c?.payload.kind === 'cite-claim' ? 'A line lit in the knowledge graph.' : 'A star lit up.';
+        toast(`${e.reviewerName} approved your work on ${c?.questTitle.replace(/^.*?: /, '') ?? 'a quest'}. ${lit}`);
         if (s.activeQuestId === e.questId) setState({ workspace: 'approved' });
       }
       if (e.type === 'contribution:stale' && s.role === 'volunteer') {
@@ -71,7 +79,7 @@ export default function App() {
 
       <main className="layout">
         <section className="work" aria-live="polite">
-          {role === 'reviewer' ? <ReviewerQueue /> : activeQuestId ? <Workspace /> : (<><ProfileBar /><QuestList /></>)}
+          {role === 'reviewer' ? <ReviewerQueue /> : activeQuestId ? <Workspace /> : (<><ProfileBar /><QuestList /><KnowledgeGraph /></>)}
         </section>
         <aside className="rack-col">
           <CapabilityRack />

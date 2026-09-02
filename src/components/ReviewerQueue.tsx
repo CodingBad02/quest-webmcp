@@ -8,6 +8,7 @@ import type { Contribution } from '../types';
 const CHECKS: Record<string, string[]> = {
   'verify-hours': ['Hours parse as valid syntax', 'Method of checking is plausible', 'Note is specific', 'No personal data', 'Plausible for this kind of place'],
   'access-photo': ['Photo shows the entrance', 'No faces or number plates', 'Access value matches the photo', 'Note explains "limited"', 'Location fits the quest'],
+  'cite-claim': ['Source is independent of Wikimedia', 'Source states this exact value', 'Source is reliable for this kind of fact', 'No personal data'],
 };
 
 /** Open the approved edit in iD on the Survey origin. A stage handoff: single use, 15 minutes, no upload. */
@@ -28,6 +29,13 @@ function Item({ c }: { c: Contribution }) {
       <div className="review-body">
         {p.kind === 'verify-hours' && <dl><dt>Opening hours</dt><dd><code>{p.openingHours}</code></dd><dt>Checked by</dt><dd>{p.verifiedBy}</dd><dt>Note</dt><dd>{p.note}</dd></dl>}
         {p.kind === 'access-photo' && <><img className="preview" src={p.imageDataUrl} alt="Entrance submitted by volunteer" /><dl><dt>Wheelchair</dt><dd><code>wheelchair={p.wheelchair}</code></dd>{p.note && <><dt>Note</dt><dd>{p.note}</dd></>}</dl></>}
+        {p.kind === 'cite-claim' && (
+          <dl>
+            <dt>Claim</dt><dd>{c.questTitle}</dd>
+            <dt>Source</dt><dd><a href={p.sourceUrl} target="_blank" rel="noopener noreferrer">{p.sourceUrl}</a></dd>
+            <dt>Where it says so</dt><dd>{p.quote}</dd>
+          </dl>
+        )}
       </div>
       <ul className="checklist">{CHECKS[p.kind].map((t) => <li key={t}><label><input type="checkbox" /> {t}</label></li>)}</ul>
       <div className="actions">
@@ -57,7 +65,7 @@ export function ReviewerQueue() {
         <div className="mine"><h2>Reviewed</h2><ul>{done.map((c) => (
           <li key={c.id} className="mine-item">
             <StateChip state={c.status} /> {c.questTitle} · {c.volunteerName}
-            {c.status === 'approved' && <button className="btn small" type="button" onClick={() => { void stageInId(c); }}>Stage in iD</button>}
+            {c.status === 'approved' && c.payload.kind !== 'cite-claim' && <button className="btn small" type="button" onClick={() => { void stageInId(c); }}>Stage in iD</button>}
           </li>
         ))}</ul></div>
       )}

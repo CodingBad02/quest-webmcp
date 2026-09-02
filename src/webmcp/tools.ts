@@ -7,8 +7,8 @@ import type { QuestRef } from '../../worker/src/client.ts';
 import { activeQuest, getState, mergeContribution, nextId, openQuest, setState, toast } from '../state/store';
 import { store, SURVEY_URL } from '../state/storeClient';
 import { broadcast } from '../channel/broadcast';
-import { validate } from '../validators';
-import type { ContributionPayload, Quest } from '../types';
+import { validate, validateCiteClaim } from '../validators';
+import type { ClaimRef, ContributionPayload, Quest } from '../types';
 
 // ---------- find ----------
 
@@ -17,6 +17,7 @@ export interface FindArgs { minutesAvailable?: number; skills?: string[]; langua
 const SKILL_ALIASES: Record<string, string> = {
   phone: 'phone', call: 'phone', calling: 'phone', talk: 'phone',
   photo: 'photo', photography: 'photo', camera: 'photo', visit: 'visit', walk: 'visit', walking: 'visit', outside: 'visit',
+  research: 'research', read: 'research', cite: 'research', sources: 'research',
 };
 
 export function findQuestsImpl(args: FindArgs): Quest[] {
@@ -24,9 +25,10 @@ export function findQuestsImpl(args: FindArgs): Quest[] {
   const minutes = args.minutesAvailable ?? s.profile.minutesAvailable;
   const skills = new Set((args.skills ?? s.profile.skills).map((x) => SKILL_ALIASES[x.toLowerCase()] ?? x.toLowerCase()));
   const done = new Set(s.contributions.filter((c) => c.status !== 'rejected' && c.status !== 'stale').map((c) => c.questId));
-  // Only quests placed in a campaign panel (buildCampaigns' bounded slice) have a star in the sky.
-  // A quest the agent can find and open must also be one the volunteer can watch light up.
-  const inSky = new Set(s.campaigns.flatMap((c) => c.questIds));
+  // Only quests placed in a bounded panel (buildCampaigns' or buildWikidataCampaigns' slice) have
+  // a mark in a collective artifact (a star in the sky, an edge in the knowledge graph). A quest
+  // the agent can find and open must also be one the volunteer can watch light up.
+  const inSky = new Set([...s.campaigns, ...s.wdCampaigns].flatMap((c) => c.questIds));
   let pool = s.quests.filter((q) => inSky.has(q.id) && !done.has(q.id) && q.estimatedMinutes <= minutes);
   if (args.type) pool = pool.filter((q) => q.type === args.type);
   if (args.remoteOnly) pool = pool.filter((q) => q.remote);
@@ -57,8 +59,127 @@ function summaryFields(payload: Extract<ContributionPayload, { kind: 'verify-hou
   ];
 }
 
+function summaryFieldsCiteClaim(q: Quest, payload: Extract<ContributionPayload, { kind: 'cite-claim' }>): [string, string][] {
+  let sourceLabel = payload.sourceUrl;
+  try { const u = new URL(payload.sourceUrl); sourceLabel = `${u.hostname}${u.pathname}`; } catch { /* keep raw string */ }
+  return [
+    ['Claim', `${q.placeName} · ${q.claim?.propertyLabel}: ${q.claim?.valueText}`],
+    ['Source', safeText(sourceLabel, 60)],
+    ['Where it says so', safeText(payload.quote, 120)],
+  ];
+}
+
 function toQuestRef(q: Quest): QuestRef {
-  return { id: q.id, type: q.type, title: q.title, placeName: q.placeName, osmRef: q.osmRef, osmVersion: q.osmVersion, lat: q.lat, lon: q.lon, license: 'Open Database License (ODbL)' };
+  return {
+    id: q.id, type: q.type, title: q.title, placeName: q.placeName,
+    osmRef: q.osmRef, osmVersion: q.osmVersion, lat: q.lat, lon: q.lon,
+    license: q.type === 'cite-claim' ? 'CC0 (Wikidata)' : 'Open Database License (ODbL)',
+    ...(q.claim ? { claim: { entityId: q.claim.entityId, property: q.claim.property, statementId: q.claim.statementId, valueRaw: q.claim.valueRaw } } : {}),
+  };
+}
+
+// ---------- cite-claim: the two network checks shared by check-contribution and approve-contribution ----------
+
+interface ClaimCheck { ok: boolean; reason?: string; unreachable?: boolean }
+
+/** The statement URI (and `statementId`, its part after `/statement/`) spells the entity-guid
+ *  join as a hyphen; the EntityData JSON's claim `id` spells the same join as `$`. Convert once,
+ *  here, so `statementId` itself stays exactly what the URI says (SPEC.md's literal example). */
+function apiClaimId(claim: ClaimRef): string {
+  const prefix = `${claim.entityId}-`;
+  return claim.statementId.startsWith(prefix) ? `${claim.entityId}$${claim.statementId.slice(prefix.length)}` : claim.statementId;
+}
+
+/** The wikibase JSON API and the SPARQL results service spell the same value differently: a
+ *  time carries a leading `+` and zeroes the month/day below its precision (`+1994-00-00T…`),
+ *  where SPARQL fills in a canonical `1994-01-01T…`; a quantity's amount also carries a leading
+ *  `+`. Compare on the meaning (the year, or the day, depending on precision; the bare number),
+ *  not the surface string, or a claim Wikidata never actually changed would read as stale. */
+function currentValueMatches(dv: unknown, valueRaw: string): { matches: boolean; display: string } {
+  if (dv && typeof dv === 'object' && 'time' in (dv as Record<string, unknown>)) {
+    const t = dv as { time: string; precision?: number };
+    const clean = (s: string) => s.replace(/^\+/, '');
+    const current = clean(t.time);
+    const raw = clean(valueRaw);
+    // Year precision (9) or coarser: the wikibase JSON zeroes month/day, SPARQL fills 01-01. Compare years only.
+    const matches = (t.precision ?? 11) <= 9 ? current.slice(0, 4) === raw.slice(0, 4) : current.slice(0, 10) === raw.slice(0, 10);
+    return { matches, display: current };
+  }
+  if (dv && typeof dv === 'object' && 'amount' in (dv as Record<string, unknown>)) {
+    const current = String((dv as { amount: string }).amount).replace(/^\+/, '');
+    return { matches: current === valueRaw.replace(/^\+/, ''), display: current };
+  }
+  const display = JSON.stringify(dv);
+  return { matches: display === valueRaw, display };
+}
+
+/** Fetches the entity's current claims and confirms the exact statement is still there, still
+ *  says what it said, and still has no reference (SPEC.md's "preserved claim identity"). An
+ *  unreachable Wikidata is not treated as a conflict: the check is skipped, not failed. */
+async function checkClaimIdentity(claim: ClaimRef): Promise<ClaimCheck> {
+  try {
+    const res = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${claim.entityId}.json`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return { ok: true, unreachable: true };
+    const data = (await res.json()) as {
+      entities?: Record<string, { claims?: Record<string, { id: string; mainsnak?: { datavalue?: { value: unknown } }; references?: unknown[] }[]> }>;
+    };
+    const claims = data.entities?.[claim.entityId]?.claims?.[claim.property] ?? [];
+    const targetId = apiClaimId(claim);
+    const match = claims.find((c) => c.id === targetId);
+    if (!match) return { ok: false, reason: 'The statement is gone from Wikidata. This quest is stale.' };
+    const { matches, display } = currentValueMatches(match.mainsnak?.datavalue?.value, claim.valueRaw);
+    if (!matches) return { ok: false, reason: `The statement changed on Wikidata (was ${claim.valueRaw}, now ${display}). This quest is stale.` };
+    if ((match.references?.length ?? 0) > 0) return { ok: false, reason: 'Someone already added a source. This quest is done.' };
+    return { ok: true };
+  } catch {
+    return { ok: true, unreachable: true };
+  }
+}
+
+/** The shared check for a cite-claim draft: structural, then source reachability
+ *  (`store.urlCheck`, the same helper the future Check button would call), then claim identity. */
+async function checkCiteClaim(q: Quest, draft: Extract<ContributionPayload, { kind: 'cite-claim' }>) {
+  const errors = validateCiteClaim(draft);
+  if (errors.length) {
+    setState({ checkErrors: errors, checkTitle: null, workspace: 'in-workspace' });
+    return result('invalid', `Not ready. Fix these:\n${errors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`);
+  }
+
+  let sourceCheck;
+  try {
+    sourceCheck = await store.urlCheck(draft.sourceUrl.trim());
+  } catch {
+    const msg = 'Source: could not reach the source check. Try again.';
+    setState({ checkErrors: [msg], checkTitle: null, workspace: 'in-workspace' });
+    return result('invalid', `Not ready. Fix these:\n1. ${msg}`);
+  }
+  if (!sourceCheck.ok) {
+    const msg = `Source: ${sourceCheck.reason ?? 'The source could not be verified.'}`;
+    setState({ checkErrors: [msg], checkTitle: null, workspace: 'in-workspace' });
+    return result('invalid', `Not ready. Fix these:\n1. ${msg}`);
+  }
+  const title = safeText(sourceCheck.title ?? '', 150);
+
+  let wdNote = '';
+  if (q.claim) {
+    const claimCheck = await checkClaimIdentity(q.claim);
+    if (!claimCheck.ok) {
+      setState({ checkErrors: [claimCheck.reason!], checkTitle: title || null, workspace: 'in-workspace' });
+      return result('stale', claimCheck.reason!);
+    }
+    if (claimCheck.unreachable) wdNote = ' Wikidata could not be reached; the claim was not re-checked.';
+  }
+
+  setState({ checkErrors: [], checkTitle: title || null, workspace: 'checked' });
+  return {
+    ...result('checked', `Ready. All checks passed.${wdNote} Ask the volunteer if they want to submit, then call submit-contribution.`),
+    confirm: {
+      summary: summaryFieldsCiteClaim(q, draft),
+      destination: "Quest's review queue",
+      visibility: 'Held for review. Not public yet.',
+      license: 'CC0 (Wikidata)',
+    },
+  };
 }
 
 // ---------- the controller ----------
@@ -101,14 +222,24 @@ export const controller = createQuestTools({
 
       if (!openQuest(id)) return result('invalid', `No quest with id "${id}". Call find-quests to get current ids.`);
       const opened = activeQuest()!;
-      return result('open', `Opened "${safeText(opened.title)}". The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00". The volunteer does this part. When the form is filled, call check-contribution.`, { questId: id });
+      const guide = opened.type === 'cite-claim'
+        ? `Opened "${safeText(opened.title)}". Find a reliable, independent source for this statement and read it. When the form is filled, call check-contribution.`
+        : `Opened "${safeText(opened.title)}". The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00". The volunteer does this part. When the form is filled, call check-contribution.`;
+      return result('open', guide, { questId: id });
     },
 
-    check() {
+    async check() {
       const s = getState();
       const q = activeQuest();
       if (!q || q.type === 'access-photo') return result('invalid', 'This quest continues on Survey.');
-      if (!s.draft || s.draft.kind !== 'verify-hours') return result('invalid', 'No quest is open. Open a quest first.');
+      if (!s.draft) return result('invalid', 'No quest is open. Open a quest first.');
+
+      if (q.type === 'cite-claim') {
+        if (s.draft.kind !== 'cite-claim') return result('invalid', 'No quest is open. Open a quest first.');
+        return checkCiteClaim(q, s.draft);
+      }
+
+      if (s.draft.kind !== 'verify-hours') return result('invalid', 'No quest is open. Open a quest first.');
       const errors = validate(s.draft);
       setState({ checkErrors: errors, workspace: errors.length ? 'in-workspace' : 'checked' });
       if (errors.length) return result('invalid', `Not ready. Fix these:\n${errors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`);
@@ -138,7 +269,8 @@ export const controller = createQuestTools({
         setState({ workspace: 'submitted' });
         broadcast({ type: 'contribution:submitted', contributionId: sc.id, questId: q.id });
         toast(`Sent to a reviewer: ${safeText(q.placeName)}.`);
-        return result('submitted', `Submitted "${safeText(q.title)}" for review. A star lights when a reviewer approves it.`, { contributionId: sc.id });
+        const lights = q.type === 'cite-claim' ? 'Its line lights in the knowledge graph when a reviewer approves it.' : 'A star lights when a reviewer approves it.';
+        return result('submitted', `Submitted "${safeText(q.title)}" for review. ${lights}`, { contributionId: sc.id });
       } catch (e) {
         return result('invalid', `Not submitted. ${(e as Error).message}`);
       }
@@ -154,32 +286,40 @@ export const controller = createQuestTools({
 
       let decision: 'approved' | 'stale' = 'approved';
       let note = '';
-      let fromVersion: number | undefined, toVersion: number | undefined;
+      let staleDetail = '';
       if (q?.osmRef && q.osmVersion != null) {
         try {
           const res = await fetch(`https://api.openstreetmap.org/api/0.6/${q.osmRef}.json`);
           if (res.ok) {
             const data = (await res.json()) as { elements?: { version?: number }[] };
             const now = data.elements?.[0]?.version;
-            if (now != null && now !== q.osmVersion) { decision = 'stale'; fromVersion = q.osmVersion; toVersion = now; }
+            if (now != null && now !== q.osmVersion) {
+              decision = 'stale';
+              staleDetail = `${safeText(c.questTitle)} changed on OpenStreetMap since this was opened (version ${q.osmVersion} → ${now}).`;
+            }
           } else {
             note = ' Source version not checked (OpenStreetMap unreachable).';
           }
         } catch {
           note = ' Source version not checked (OpenStreetMap unreachable).';
         }
+      } else if (q?.type === 'cite-claim' && q.claim) {
+        const claimCheck = await checkClaimIdentity(q.claim);
+        if (!claimCheck.ok) { decision = 'stale'; staleDetail = claimCheck.reason!; }
+        else if (claimCheck.unreachable) note = ' Wikidata could not be reached; the claim was not re-checked.';
       }
 
       try {
         const sc = await store.review(contributionId, decision, reviewerName, comment?.slice(0, 200));
         mergeContribution(sc);
         broadcast(decision === 'stale'
-          ? { type: 'contribution:stale', contributionId, questId: c.questId, comment: `${safeText(c.questTitle)} changed on OpenStreetMap.` }
+          ? { type: 'contribution:stale', contributionId, questId: c.questId, comment: staleDetail || `${safeText(c.questTitle)} changed.` }
           : { type: 'contribution:approved', contributionId, questId: c.questId, reviewerName });
         if (decision === 'stale') {
-          return result('stale', `${safeText(c.questTitle)} changed on OpenStreetMap since this was opened (version ${fromVersion} → ${toVersion}). Marked stale. The volunteer can redo it.`, { contributionId });
+          return result('stale', `${staleDetail} Marked stale. The volunteer can redo it.`, { contributionId });
         }
-        return result('approved', `Approved. A star lit for "${safeText(c.questTitle)}". The volunteer was told.${note}`, { contributionId });
+        const lit = q?.type === 'cite-claim' ? `A line lit in the knowledge graph for "${safeText(c.questTitle)}".` : `A star lit for "${safeText(c.questTitle)}".`;
+        return result('approved', `Approved. ${lit} The volunteer was told.${note}`, { contributionId });
       } catch (e) {
         return result('invalid', `Not approved. ${(e as Error).message}`);
       }

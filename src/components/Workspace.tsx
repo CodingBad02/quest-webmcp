@@ -45,18 +45,21 @@ function HandoffCard({ q }: { q: Quest }) {
   );
 }
 
+const KIND_LABEL: Record<string, string> = { 'verify-hours': 'Confirm hours', 'access-photo': 'Step-free entry', 'cite-claim': 'Cite a source' };
+
 export function Workspace() {
   const q = useAppState(() => activeQuest());
   const draft = useAppState((s) => s.draft);
   const ws = useAppState((s) => s.workspace);
   const errors = useAppState((s) => s.checkErrors);
+  const checkTitle = useAppState((s) => s.checkTitle);
   if (!q) return null;
 
   const head = (
     <div className="section-head">
       <h1>{q.placeName}</h1>
       <p className="muted">
-        <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : 'Step-free entry'}</span>
+        <span className={`kind kind-${q.type}`}>{KIND_LABEL[q.type]}</span>
         {q.address && <span>{q.address}</span>}
         {q.osmLink && <a href={q.osmLink} target="_blank" rel="noreferrer">View on OpenStreetMap</a>}
       </p>
@@ -73,9 +76,10 @@ export function Workspace() {
     );
   }
 
-  if (!draft || draft.kind !== 'verify-hours') return null;
+  if (!draft) return null;
   const set = (p: ContributionPayload) => updateDraft(p);
   const locked = ws === 'submitted' || ws === 'approved';
+  const lastStepLabel = q.type === 'cite-claim' ? 'Sourced' : 'Star';
 
   return (
     <div className="workspace" data-state={ws}>
@@ -86,19 +90,46 @@ export function Workspace() {
         <Step n={1} label="Do the work" state={ws === 'in-workspace' ? 'on' : 'done'} />
         <Step n={2} label="Check" state={ws === 'checked' ? 'on' : ws === 'in-workspace' ? '' : 'done'} />
         <Step n={3} label="Review" state={ws === 'submitted' ? 'on' : ws === 'approved' ? 'done' : ''} />
-        <Step n={4} label="Star" state={ws === 'approved' ? 'on' : ''} />
+        <Step n={4} label={lastStepLabel} state={ws === 'approved' ? 'on' : ''} />
       </ol>
 
-      <fieldset className="form" disabled={locked}>
-        <p className="help">Call the place, check its website, or visit. Then enter the hours in OpenStreetMap form. Use HH:MM. Example: <code>Mo-Fr 08:00-17:00</code>. A comma splits a break. A semicolon splits day groups.</p>
-        <div className="presets">{PRESETS.map(([l, v]) => <button type="button" key={v} className="chip" onClick={() => set({ ...draft, openingHours: v })}>{l}</button>)}</div>
-        <div className="field"><label htmlFor="oh">Opening hours</label><input id="oh" value={draft.openingHours} placeholder="Mo-Sa 09:00-21:00" onChange={(e) => set({ ...draft, openingHours: e.target.value })} aria-describedby="err-0" /></div>
-        <div className="field"><label htmlFor="vb">How did you check?</label>
-          <select id="vb" value={draft.verifiedBy} onChange={(e) => set({ ...draft, verifiedBy: e.target.value as typeof draft.verifiedBy })}>
-            <option value="">Choose</option><option value="phone">I called them</option><option value="website">Their website</option><option value="visit">I went there</option>
-          </select></div>
-        <div className="field"><label htmlFor="note">What did they say?</label><textarea id="note" rows={2} value={draft.note} placeholder="Spoke to the manager at 4 pm. Closed on the second Saturday." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
-      </fieldset>
+      {draft.kind === 'verify-hours' && (
+        <fieldset className="form" disabled={locked}>
+          <p className="help">Call the place, check its website, or visit. Then enter the hours in OpenStreetMap form. Use HH:MM. Example: <code>Mo-Fr 08:00-17:00</code>. A comma splits a break. A semicolon splits day groups.</p>
+          <div className="presets">{PRESETS.map(([l, v]) => <button type="button" key={v} className="chip" onClick={() => set({ ...draft, openingHours: v })}>{l}</button>)}</div>
+          <div className="field"><label htmlFor="oh">Opening hours</label><input id="oh" value={draft.openingHours} placeholder="Mo-Sa 09:00-21:00" onChange={(e) => set({ ...draft, openingHours: e.target.value })} aria-describedby="err-0" /></div>
+          <div className="field"><label htmlFor="vb">How did you check?</label>
+            <select id="vb" value={draft.verifiedBy} onChange={(e) => set({ ...draft, verifiedBy: e.target.value as typeof draft.verifiedBy })}>
+              <option value="">Choose</option><option value="phone">I called them</option><option value="website">Their website</option><option value="visit">I went there</option>
+            </select></div>
+          <div className="field"><label htmlFor="note">What did they say?</label><textarea id="note" rows={2} value={draft.note} placeholder="Spoke to the manager at 4 pm. Closed on the second Saturday." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
+        </fieldset>
+      )}
+
+      {draft.kind === 'cite-claim' && q.claim && (
+        <fieldset className="form" disabled={locked}>
+          <p className="help">
+            Claim: <strong>{q.placeName} · {q.claim.propertyLabel}: {q.claim.valueText}</strong>{' '}
+            <a href={`https://www.wikidata.org/wiki/${q.claim.entityId}#${q.claim.property}`} target="_blank" rel="noreferrer">View on Wikidata</a>
+          </p>
+          <p className="help">Find a reliable, independent source that states this. Read it before you fill this in.</p>
+          <div className="field">
+            <label htmlFor="sourceUrl">Source URL</label>
+            <input id="sourceUrl" type="url" value={draft.sourceUrl} placeholder="https://example.com/article" aria-describedby="err-0" onChange={(e) => set({ ...draft, sourceUrl: e.target.value })} />
+            {checkTitle && <p className="muted small">Page title: {checkTitle}</p>}
+          </div>
+          <div className="field">
+            <label htmlFor="quote">Where it says so</label>
+            <textarea id="quote" rows={2} maxLength={300} value={draft.quote} placeholder="The sentence or figure on the page that states this." onChange={(e) => set({ ...draft, quote: e.target.value })} />
+          </div>
+          <div className="field">
+            <label className="check-row" htmlFor="confirmed">
+              <input id="confirmed" type="checkbox" checked={draft.confirmed} onChange={(e) => set({ ...draft, confirmed: e.target.checked })} />
+              I read the source. It states this exact value.
+            </label>
+          </div>
+        </fieldset>
+      )}
 
       {errors.length > 0 && (
         <ul className="errors" id="err-0" role="alert">{errors.map((e, i) => <li key={i}>{e}</li>)}</ul>

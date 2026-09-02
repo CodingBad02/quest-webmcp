@@ -233,6 +233,26 @@ textarea { resize: vertical; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); border-color: color-mix(in srgb, var(--accent) 88%, var(--text)); }
 
+.check-row { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; }
+.check-row input { margin: 0; accent-color: var(--accent); }
+
+/* ---------- Knowledge graph (DESIGN.md §8): the Wikidata sibling to the sky. Entities on a
+   deterministic ring, one edge per claim to a small terminal mark standing for its source.
+   Sits on the paper surface, not the night sky. */
+.kg { margin-top: 40px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
+.kg-svg { display: block; width: 100%; height: 320px; }
+.kg-node { fill: var(--surface-3); stroke: var(--muted); stroke-width: 1.2; }
+.kg-label { font-family: var(--sans); font-size: 10px; fill: var(--muted); }
+.kg-edge { stroke: var(--border); stroke-width: 1; }
+.kg-terminal { fill: none; stroke: var(--border); stroke-width: 1; transform-box: fill-box; transform-origin: center; }
+.kg-claim[data-state="approved"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.kg-claim[data-state="approved"] .kg-terminal { stroke: var(--star-lit); stroke-width: 1.5; }
+.kg-claim[data-state="landed"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.5; }
+.kg-claim[data-state="landed"] .kg-terminal { stroke: var(--star-lit); fill: var(--star-lit); }
+.kg-claim-pulse .kg-terminal { animation: kg-pulse 500ms var(--ease-out); }
+.kg-caption { margin-top: 8px; font-family: var(--mono); }
+@keyframes kg-pulse { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
 /* ---------- Capability rack: Quest's layout wrapper around the portable .qt-rack (qt.css owns
    the machine-panel look itself — background, border, row states, timings; DESIGN.md §2, §5).
    `.qt-rack.rack` matches qt.css's own `.qt.qt-rack` specificity so this position override wins. */

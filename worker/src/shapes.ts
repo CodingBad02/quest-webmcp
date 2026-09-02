@@ -4,7 +4,7 @@ export type StoredState = 'open' | 'submitted' | 'approved' | 'rejected' | 'stal
 
 export interface QuestRef {
   id: string;
-  type: 'verify-hours' | 'access-photo';
+  type: 'verify-hours' | 'access-photo' | 'cite-claim';
   title: string;
   placeName: string;
   /** OSM element, e.g. "node/123". */
@@ -14,6 +14,8 @@ export interface QuestRef {
   lat?: number;
   lon?: number;
   license: string;
+  /** cite-claim only: the Wikidata statement the review's conflict check re-fetches. */
+  claim?: { entityId: string; property: string; statementId: string; valueRaw: string };
 }
 
 export interface StoredContribution {

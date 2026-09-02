@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { StoredContribution } from '../../worker/src/client.ts';
 import { store } from './storeClient';
-import type { AppState, Contribution, ContributionPayload, Quest, WorkspaceState } from '../types';
+import type { AppState, Contribution, ContributionPayload, Quest, QuestType, WorkspaceState } from '../types';
 
 const KEY = 'quest.state.v1';
 
@@ -9,6 +9,7 @@ const defaultState = (): AppState => ({
   profile: { name: '', minutesAvailable: 20, skills: [], languages: ['English'], accessibilityNeeds: [] },
   quests: [],
   campaigns: [],
+  wdCampaigns: [],
   contributions: [],
   activeQuestId: null,
   draft: null,
@@ -16,6 +17,7 @@ const defaultState = (): AppState => ({
   role: new URLSearchParams(location.search).get('role') === 'reviewer' ? 'reviewer' : 'volunteer',
   questSource: 'loading',
   checkErrors: [],
+  checkTitle: null,
   toast: null,
   handoff: null,
 });
@@ -93,7 +95,8 @@ export async function loadContributionsFromStore() {
   }
 }
 
-export function emptyDraft(): ContributionPayload {
+export function emptyDraft(type: QuestType): ContributionPayload {
+  if (type === 'cite-claim') return { kind: 'cite-claim', sourceUrl: '', quote: '', confirmed: false };
   return { kind: 'verify-hours', openingHours: '', verifiedBy: '', note: '' };
 }
 
@@ -103,16 +106,16 @@ export function openQuest(questId: string) {
   const q = state.quests.find((x) => x.id === questId);
   if (!q) return false;
   if (q.type === 'access-photo') {
-    setState({ activeQuestId: questId, draft: null, workspace: 'in-workspace', checkErrors: [], handoff: null });
+    setState({ activeQuestId: questId, draft: null, workspace: 'in-workspace', checkErrors: [], checkTitle: null, handoff: null });
     return true;
   }
   const existing = state.contributions.find((c) => c.questId === questId && c.status !== 'rejected' && c.status !== 'stale');
   const ws: WorkspaceState = existing ? (existing.status === 'submitted' ? 'submitted' : existing.status === 'approved' || existing.status === 'landed' ? 'approved' : 'in-workspace') : 'in-workspace';
-  setState({ activeQuestId: questId, draft: existing?.payload ?? emptyDraft(), workspace: ws, checkErrors: [], handoff: null });
+  setState({ activeQuestId: questId, draft: existing?.payload ?? emptyDraft(q.type), workspace: ws, checkErrors: [], checkTitle: null, handoff: null });
   return true;
 }
 
-export function closeQuest() { setState({ activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], handoff: null }); }
+export function closeQuest() { setState({ activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], checkTitle: null, handoff: null }); }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export function toast(msg: string) {

@@ -13,7 +13,7 @@ Five verbs, one import. Any site that adopts `@gatherlight/quest-tools` becomes 
 | Part | Path | What it is |
 |---|---|---|
 | Package | `packages/quest-tools` | `@gatherlight/quest-tools`. Framework-neutral. Registers the five WebMCP tools, owns the state machine, the `quest/1` result envelope, character budgets, the check → confirm → check → submit order, cancellation, and the capability rack. Optional rack renderer and native `<dialog>` confirm. |
-| Quest | `src/` | The reference site. React. Finds real gaps in OpenStreetMap near central Bengaluru, runs the review queue, and renders the sky: real places as stars, lit only when the world changed. |
+| Quest | `src/` | The reference site. React. Two adapters: OpenStreetMap gaps near central Bengaluru (hours, step-free entry) and Wikidata statements about Bengaluru that lack a source. Runs the review queue. Renders two collective artifacts: the sky (real places as stars) and the knowledge graph (entity → claim → source). Approved marks stay outlined; only landed ones fill. |
 | Survey | `survey/` | A partner site on a second origin. Vanilla TypeScript. Receives a handoff from Quest and lets a person record a step-free entrance check. Imports the package, overrides no design token. |
 | Store | `worker/` | One Cloudflare Durable Object holding two entities: `contributions` and `handoffs`. Handoffs are hashed, origin-bound, single-use, and expire. Self-review is refused. Serves Survey as static assets. |
 
@@ -30,6 +30,16 @@ Five verbs, one import. Any site that adopts `@gatherlight/quest-tools` becomes 
 Every tool returns text that ends with one machine line: `quest/1 {"ok":true,"state":"open","questId":"…","next":{…}}`. States: `available open invalid checked declined submitted approved rejected stale landed`. `approved` never claims the public map changed; only `landed` does.
 
 The agent never does the volunteer's task. No tool argument accepts evidence.
+
+## Quest types
+
+| Type | Source | Human does | Agent checks |
+|---|---|---|---|
+| `verify-hours` | OSM places with no `opening_hours` | Calls or visits, enters hours | `opening_hours` syntax, method, note |
+| `access-photo` | OSM places with no `wheelchair` | Visits, photographs the entrance on Survey | Fields present, photo attached |
+| `cite-claim` | Wikidata statements with no reference (SPARQL, Bengaluru) | Finds an independent source and reads it | https, reachable, not Wikimedia, claim unchanged on Wikidata |
+
+Approved OSM edits can be staged in iD from the review queue (`Stage in iD`): the live element is loaded, its version compared, and the exact tag diff placed in iD's undo history. Nothing is uploaded.
 
 ## The cross-site loop
 

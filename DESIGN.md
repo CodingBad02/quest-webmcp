@@ -43,7 +43,7 @@ Everything else — quest cards, the workspace form, the reviewer queue, page co
 - Five envelope states become ten (§4). A quest can be stale, declined, or invalid, and each needs its own honest mark.
 - Two real skins now exist side by side: Quest (warm paper, cold sky) and Survey (a plain utility partner site, system fonts, no sky) (§3).
 - Cross-site handoff is now visible UI, not an implementation detail: a provenance strip, a return receipt, a runtime pill (§7).
-- The sky's visual grammar generalizes to a second collective artifact, a knowledge graph, reserved but not built (§8).
+- The sky's visual grammar generalizes to a second collective artifact, the knowledge graph for Wikidata citations (§8).
 
 ## 2. Portable token contract
 
@@ -297,14 +297,14 @@ All three render in the same neutral pill style (`--qt-color-text-muted` on `--q
 
 The current contribution pulses once on ignition (500ms, scale `.6→1`, opacity `0→1`, `--qt-ease-out`), its nearest lit neighbor's connector draws in over the following 400ms, and the whole sequence stays under 600ms — unchanged from v1. Hover or tap reveals first names only: `Verified by Priya. Reviewed by Tom.` No per-person counts, no ranks, no lifetime score, anywhere.
 
-**The knowledge graph (Wikidata, reserved — not built in P0).** Same primitives as the sky: SVG circles and paths, no charting library, no continuous scale.
+**The knowledge graph (Wikidata).** Built in `src/components/KnowledgeGraph.tsx`. Same primitives as the sky: SVG circles and paths, no charting library, no continuous scale.
 
 - **Entity node** — a circle, one of three fixed sizes by claim count (small / medium / large — never continuous, so it can't read as a leaderboard).
 - **Claim edge** — a line from the entity to a small terminal mark representing its source.
 - **Approved, not yet landed** — dashed edge, outlined terminal mark.
 - **Landed** — solid edge, filled terminal mark, the same gold used for stars, the same single-pulse rule on the current contribution.
 
-No node ever shows an edit count beside a name. The grammar is specified so a future build has no open design questions; it is not implemented now.
+No node ever shows an edit count beside a name.
 
 ## 9. Motion and reduced motion
 
