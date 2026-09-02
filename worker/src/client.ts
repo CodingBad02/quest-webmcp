@@ -39,6 +39,7 @@ export function createStoreClient(baseUrl: string, session: string) {
     issueHandoff: (contributionId: string, targetOrigin: string, ttlSeconds = 300, action: 'contribute' | 'stage' = 'contribute') =>
       call<{ handoff: string; expiresAt: string }>('POST', '/handoffs', { contributionId, targetOrigin, ttlSeconds, action }),
     exchange: (handoff: string) => call<ExchangeResponse>('POST', '/handoffs/exchange', { handoff }),
+    urlCheck: (url: string) => call<{ ok: boolean; status?: number; contentType?: string; title?: string; finalUrl?: string; reason?: string }>('GET', `/urlcheck?url=${encodeURIComponent(url)}`),
   };
 }
 

@@ -57,4 +57,11 @@ assert.equal(r.status, 201, 'a reviewer can mint a stage handoff for an approved
 r = await api('POST', '/handoffs/exchange', { body: { handoff: r.data.handoff }, origin: 'http://localhost:8787' });
 assert.equal(r.status, 200); assert.equal(r.data.action, 'stage'); assert.equal(r.data.session, undefined, 'stage grants no volunteer session');
 
+r = await fetch(`${BASE}/api/urlcheck?url=${encodeURIComponent('https://en.wikipedia.org/wiki/Bengaluru')}`).then((x) => x.json());
+assert.equal(r.ok, false, 'a Wikimedia page is refused as a source'); assert.match(r.reason, /own source/);
+r = await fetch(`${BASE}/api/urlcheck?url=${encodeURIComponent('http://example.com')}`).then((x) => x.json());
+assert.equal(r.ok, false, 'http is refused');
+r = await fetch(`${BASE}/api/urlcheck?url=${encodeURIComponent('https://example.com/')}`).then((x) => x.json());
+assert.equal(r.ok, true, 'a reachable https page passes'); assert.match(r.title, /Example Domain/);
+
 console.log('store smoke: all checks passed');
