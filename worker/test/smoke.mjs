@@ -52,4 +52,9 @@ assert.equal(r.status, 200); assert.equal(r.data.state, 'approved'); assert.equa
 r = await api('PUT', `/contributions/${id}`, { body: { state: 'open' }, session: vol });
 assert.equal(r.status, 409, 'an approved contribution cannot be reopened');
 
+r = await api('POST', '/handoffs', { body: { contributionId: id, targetOrigin: 'http://localhost:8787', action: 'stage' }, session: rev });
+assert.equal(r.status, 201, 'a reviewer can mint a stage handoff for an approved contribution');
+r = await api('POST', '/handoffs/exchange', { body: { handoff: r.data.handoff }, origin: 'http://localhost:8787' });
+assert.equal(r.status, 200); assert.equal(r.data.action, 'stage'); assert.equal(r.data.session, undefined, 'stage grants no volunteer session');
+
 console.log('store smoke: all checks passed');

@@ -51,3 +51,11 @@ body {
   .survey-layout { grid-template-columns: 1fr 280px; align-items: start; }
   #rack { position: sticky; top: 24px; }
 }
+
+/* Stage-in-iD page: the editor fills the viewport under the strip and status line. */
+.id-page { padding: 0; max-width: none; display: flex; flex-direction: column; height: 100vh; }
+.id-page .qt-handoff { margin: 0; }
+.id-status { padding: 10px 16px; font-size: 14px; line-height: 1.5; background: #FFFFFF; border-bottom: 1px solid #DDDDD8; }
+.id-status[data-tone="warn"] { color: #8A1E17; background: #FBEDEB; }
+.id-status[data-tone="ok"] { color: #1F4D36; background: #E9F3EC; }
+.id-container { flex: 1; min-height: 0; position: relative; }

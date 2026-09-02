@@ -36,8 +36,8 @@ export function createStoreClient(baseUrl: string, session: string) {
     upsert: (id: string, patch: Partial<StoredContribution>) => call<StoredContribution>('PUT', `/contributions/${id}`, patch),
     review: (id: string, decision: 'approved' | 'rejected' | 'stale', reviewerName: string, comment?: string) =>
       call<StoredContribution>('POST', `/contributions/${id}/review`, { decision, reviewerName, comment }),
-    issueHandoff: (contributionId: string, targetOrigin: string, ttlSeconds = 300) =>
-      call<{ handoff: string; expiresAt: string }>('POST', '/handoffs', { contributionId, targetOrigin, ttlSeconds }),
+    issueHandoff: (contributionId: string, targetOrigin: string, ttlSeconds = 300, action: 'contribute' | 'stage' = 'contribute') =>
+      call<{ handoff: string; expiresAt: string }>('POST', '/handoffs', { contributionId, targetOrigin, ttlSeconds, action }),
     exchange: (handoff: string) => call<ExchangeResponse>('POST', '/handoffs/exchange', { handoff }),
   };
 }

@@ -189,6 +189,7 @@ async function boot() {
   try {
     const anon = createStoreClient(STORE_URL, 'exchange');
     const ex = await anon.exchange(token);
+    if (ex.action !== 'contribute' || !ex.session) return renderEmpty('This handoff is not for a survey.');
     contribution = ex.contribution;
     store = createStoreClient(STORE_URL, ex.session);
     if (contribution.quest.type !== 'access-photo') return renderEmpty('This site handles step-free entry surveys only.');

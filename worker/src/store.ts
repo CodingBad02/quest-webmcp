@@ -101,17 +101,20 @@ export class Store extends DurableObject {
     return json(next);
   }
 
-  /** Mint a short-lived, single-use capability bound to one contribution, one origin, one action. */
+  /** Mint a short-lived, single-use capability bound to one contribution, one origin, one action.
+   *  `contribute` needs the owner. `stage` needs an approved contribution and any session. */
   private async issueHandoff(b: Record<string, unknown>, session: string) {
     if (!session) return fail(401, 'Missing session.');
     const c = await this.ctx.storage.get<StoredContribution>(`c:${b.contributionId}`);
     if (!c) return fail(404, 'No such contribution.');
-    if (c.ownerSession !== session) return fail(403, 'Not your contribution.');
+    const action: Handoff['action'] = b.action === 'stage' ? 'stage' : 'contribute';
+    if (action === 'contribute' && c.ownerSession !== session) return fail(403, 'Not your contribution.');
+    if (action === 'stage' && c.state !== 'approved') return fail(409, `Only an approved contribution can be staged. This one is ${c.state}.`);
     let target: string;
     try { target = new URL(String(b.targetOrigin)).origin; } catch { return fail(400, 'targetOrigin must be a URL.'); }
     const ttl = Math.min(Number(b.ttlSeconds) || 300, MAX_HANDOFF_TTL);
     const t = token();
-    const h: Handoff = { hash: await sha256(t), contributionId: c.id, targetOrigin: target, action: 'contribute', expiresAt: new Date(Date.now() + ttl * 1000).toISOString(), used: false };
+    const h: Handoff = { hash: await sha256(t), contributionId: c.id, targetOrigin: target, action, expiresAt: new Date(Date.now() + ttl * 1000).toISOString(), used: false };
     await this.ctx.storage.put(`h:${h.hash}`, h);
     return json({ handoff: t, expiresAt: h.expiresAt }, 201);
   }
@@ -129,7 +132,7 @@ export class Store extends DurableObject {
     const c = await this.ctx.storage.get<StoredContribution>(`c:${h.contributionId}`);
     if (!c) return fail(404, 'The contribution behind this handoff is gone.');
     await this.ctx.storage.put(key, { ...h, used: true });
-    const res: ExchangeResponse = { contribution: c, session: c.ownerSession, expiresAt: h.expiresAt };
+    const res: ExchangeResponse = { contribution: c, action: h.action, expiresAt: h.expiresAt, ...(h.action === 'contribute' ? { session: c.ownerSession } : {}) };
     return json(res);
   }
 }

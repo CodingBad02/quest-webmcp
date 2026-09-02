@@ -11,5 +11,5 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["main.ts", "vite.config.ts"]
+  "include": ["main.ts", "id.ts", "vite.config.ts"]
 }

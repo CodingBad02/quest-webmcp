@@ -40,14 +40,16 @@ export interface Handoff {
   hash: string;
   contributionId: string;
   targetOrigin: string;
-  action: 'contribute';
+  /** contribute: act as the volunteer on a partner site. stage: load an approved edit into an editor, no write. */
+  action: 'contribute' | 'stage';
   expiresAt: string;
   used: boolean;
 }
 
 export interface ExchangeResponse {
   contribution: StoredContribution;
-  /** The right to act as the volunteer for this one contribution. */
-  session: string;
+  action: 'contribute' | 'stage';
+  /** contribute only: the right to act as the volunteer for this one contribution. */
+  session?: string;
   expiresAt: string;
 }
