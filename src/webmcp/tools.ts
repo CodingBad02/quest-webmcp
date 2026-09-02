@@ -1,5 +1,5 @@
 /**
- * The four WebMCP tools. Each is a thin wrapper over an impl function the UI also calls.
+ * The five WebMCP tools. Each is a thin wrapper over an impl function the UI also calls.
  * Agent does logistics. Human does the work.
  */
 import { activeQuest, getState, nextId, openQuest, setState, toast, upsertContribution } from '../state/store';
