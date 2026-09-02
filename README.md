@@ -1,59 +1,89 @@
 # Quest
 
-Turn twenty free minutes into one real, checked community contribution. Your browser agent does the logistics. You do the work.
+Turn twenty free minutes into one real, checked contribution to the public map. One browser agent coordinates the logistics across sites. A person does the part only a person can do.
 
 Built for The WebMCP Challenge, September 2026.
 
-## What it does
+## The idea in one line
 
-Quests come from real gaps in OpenStreetMap: places near you with no wheelchair access tag, or no opening hours. A third quest type rewrites one paragraph of a public help page in plain words.
+Five verbs, one import. Any site that adopts `@gatherlight/quest-tools` becomes agent-ready for volunteering: the agent finds, opens, checks, and submits; the human gathers the evidence and confirms every consequential action.
 
-A WebMCP-enabled browser agent can call five tools on this page. They appear and disappear with page state.
+## What is here
 
-| Tool | Available when | Job |
+| Part | Path | What it is |
 |---|---|---|
-| `find-quests` | Always | Match quests to minutes, skills, and whether you can go out |
-| `open-quest` | Always | Open one quest in the workspace |
-| `check-contribution` | A quest is open | Validate the form. Return exactly what to fix |
-| `submit-contribution` | Check passed | Open a confirm dialog. Wait for your click. Then send to a reviewer |
-| `approve-contribution` | Reviewer tab, queue not empty | Approve one submission. Light a star. Notify the volunteer |
+| Package | `packages/quest-tools` | `@gatherlight/quest-tools`. Framework-neutral. Registers the five WebMCP tools, owns the state machine, the `quest/1` result envelope, character budgets, the check → confirm → check → submit order, cancellation, and the capability rack. Optional rack renderer and native `<dialog>` confirm. |
+| Quest | `src/` | The reference site. React. Finds real gaps in OpenStreetMap near central Bengaluru, runs the review queue, and renders the sky: real places as stars, lit only when the world changed. |
+| Survey | `survey/` | A partner site on a second origin. Vanilla TypeScript. Receives a handoff from Quest and lets a person record a step-free entrance check. Imports the package, overrides no design token. |
+| Store | `worker/` | One Cloudflare Durable Object holding two entities: `contributions` and `handoffs`. Handoffs are hashed, origin-bound, single-use, and expire. Self-review is refused. Serves Survey as static assets. |
 
-The agent never does the volunteer's task. It cannot make the call, take the photo, or know how a person reads a form.
+## The five tools
 
-## Run it
+| Tool | Registered when | Job |
+|---|---|---|
+| `find-quests` | Always | Match quests to minutes and skills. Returns ids. |
+| `open-quest` | Always | Open one quest. For a step-free entry quest it returns `next.url` and a short-lived `handoff`; the agent navigates there. |
+| `check-contribution` | A quest is open on this origin | Validate the form. Return exactly what to fix. |
+| `submit-contribution` | Check passed | Open a confirm dialog. Wait up to 90 seconds for the click. Nothing is sent without it. |
+| `approve-contribution` | Reviewer tab, queue not empty | Approve one submission after reading it. Conflict-checked against the live OSM element version. |
+
+Every tool returns text that ends with one machine line: `quest/1 {"ok":true,"state":"open","questId":"…","next":{…}}`. States: `available open invalid checked declined submitted approved rejected stale landed`. `approved` never claims the public map changed; only `landed` does.
+
+The agent never does the volunteer's task. No tool argument accepts evidence.
+
+## The cross-site loop
+
+1. On Quest, the agent calls `find-quests`, then `open-quest` on a step-free entry quest. Quest stores a draft and mints a handoff bound to Survey's origin.
+2. The agent navigates to `next.url`. Survey exchanges the handoff once, registers `check-contribution`, and shows `Carried from Quest · expires 4:59`.
+3. A person visits the entrance and fills Survey's form. The agent calls `check-contribution`; `submit-contribution` appears.
+4. The agent calls `submit-contribution`. The person clicks Send. The store holds it as `submitted`, `via` Survey.
+5. A different session approves on Quest. A gold ring appears on the sky for that place.
+
+## Run it locally
 
 ```
 npm install
-npm run dev
+npm run dev:store      # Durable Object store + Survey on http://localhost:8787
+npm run dev            # Quest on http://localhost:5173
 ```
 
-Open in a WebMCP runtime:
+Survey needs a build to be served by the store: `npm run build:survey`. For Survey's own dev server: `npm run dev:survey` (http://localhost:5174).
+
+Open Quest in a WebMCP runtime:
 
 - Chrome 149 or newer: enable `chrome://flags/#enable-webmcp-testing`, relaunch. Or launch with `--enable-features=WebMCP`.
 - ChatGPT desktop app browser: WebMCP is on by default.
 
-Without WebMCP the app runs in manual mode. Every tool has a button.
+Without WebMCP everything runs in manual mode. Every tool has a button. The rack says `Agent runtime: none. Manual mode.`
 
-Open `/?role=reviewer` in a second tab to review and approve. Tabs sync with BroadcastChannel and localStorage.
+Open `/?role=reviewer` in a second tab to review. The reviewer tab uses a separate anonymous session, so the store's self-review block holds even in one browser.
 
 ## Test
 
-Real Chrome, WebMCP on, tools called through `document.modelContext.executeTool` as an agent would:
+```
+npm run test:contract          # package: names, budgets, registration by state, envelope, confirm order, cancellation
+node worker/test/smoke.mjs     # store: ownership, handoff origin/single-use/expiry, self-review
+npm run build && npm run build:survey
+npx vite preview --port 4173 & npm run test:e2e   # real Chrome, WebMCP on, the whole loop through document.modelContext
+```
+
+## Deploy
+
+Quest deploys to GitHub Pages on push (`.github/workflows/pages.yml`). Set repository variables `STORE_URL` and `SURVEY_URL` to the Worker's URL so the build points at your store.
+
+The store and Survey deploy as one Worker: `.github/workflows/worker.yml` on push, with secret `CLOUDFLARE_API_TOKEN` and variable `QUEST_URL`. By hand:
 
 ```
-npm run build
-npx vite preview --port 4173 &
-node tests/e2e.mjs
+npm run build:survey
+cd worker && npx wrangler login && npx wrangler deploy
 ```
 
-Fourteen checks. Screenshots land in `test-results/`.
+Then add Quest's origin to `ALLOWED_ORIGINS` in `worker/wrangler.toml`.
 
-## Stack
+## Design
 
-Vite, React, TypeScript, `opening_hours` for OSM hours validation. No backend. State in localStorage. Quests from the Overpass API with a bundled offline copy for central Bengaluru.
+`DESIGN.md` is the design source of truth. Two surfaces: the sky (dark, deep, slow, real places) and the rack (flat, bright, mono, exact). The rack and dialog ship in the package under a `--qt-*` token contract; Quest and Survey prove one grammar in two skins.
 
 ## Data and licences
 
-Place data © OpenStreetMap contributors, ODbL. Rewrite sources: USA.gov (public domain), GOV.UK (Open Government Licence v3.0), WHO fact sheets (CC BY-NC-SA 3.0 IGO), Wikipedia (CC BY-SA 4.0). Version 1 does not write to OpenStreetMap. Approved contributions stay in the app for a reviewer to carry over by hand.
-
-MIT licence.
+Place data © OpenStreetMap contributors, ODbL. P0 does not write to OpenStreetMap; approved work waits for a reviewer-owned edit (P1). MIT licence.

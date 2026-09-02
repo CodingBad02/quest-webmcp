@@ -9,7 +9,10 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test:e2e": "node tests/e2e.mjs",
-    "test:contract": "node --test 'packages/quest-tools/test/*.test.ts'"
+    "test:contract": "node --test 'packages/quest-tools/test/*.test.ts'",
+    "dev:store": "npm run dev -w worker",
+    "dev:survey": "npm run dev -w survey",
+    "build:survey": "npm run build -w survey"
   },
   "dependencies": {
     "opening_hours": "^3.14.0",

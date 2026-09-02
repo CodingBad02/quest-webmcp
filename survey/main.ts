@@ -8,8 +8,8 @@ import { createStoreClient, type StoredContribution } from '../worker/src/client
 import '@gatherlight/quest-tools/qt.css';
 import './survey.css';
 
-const STORE_URL = (import.meta.env.VITE_STORE_URL as string | undefined) ?? location.origin;
-const QUEST_URL = (import.meta.env.VITE_QUEST_URL as string | undefined) ?? 'http://localhost:5173/';
+const STORE_URL = (import.meta.env.VITE_STORE_URL as string | undefined) || location.origin;
+const QUEST_URL = (import.meta.env.VITE_QUEST_URL as string | undefined) || 'http://localhost:5173/';
 
 const work = document.getElementById('work')!;
 const strip = document.getElementById('handoff')!;

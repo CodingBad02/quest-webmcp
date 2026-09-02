@@ -1,0 +1,21 @@
+name: Deploy store Worker and Survey
+on:
+  push:
+    branches: [main]
+    paths: [worker/**, survey/**, packages/**, .github/workflows/worker.yml]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - run: npm run build:survey
+        env:
+          VITE_QUEST_URL: ${{ vars.QUEST_URL }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: worker
