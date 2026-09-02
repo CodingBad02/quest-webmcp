@@ -75,7 +75,6 @@ export interface AppState {
   role: 'volunteer' | 'reviewer';
   questSource: 'live' | 'cached' | 'fallback' | 'loading';
   checkErrors: string[];
-  confirmOpen: boolean;
   toast: string | null;
 }
 

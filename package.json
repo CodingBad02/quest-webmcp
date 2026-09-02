@@ -8,13 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:e2e": "node tests/e2e.mjs"
+    "test:e2e": "node tests/e2e.mjs",
+    "test:contract": "node --test 'packages/quest-tools/test/*.test.ts'"
   },
   "dependencies": {
     "opening_hours": "^3.14.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "@gatherlight/quest-tools": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -27,5 +29,10 @@
     "playwright": "^1.62.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
-  }
+  },
+  "workspaces": [
+    "packages/*",
+    "worker",
+    "survey"
+  ]
 }

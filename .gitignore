@@ -6,3 +6,6 @@ dist
 test-results
 .impeccable
 .playwright-mcp
+survey/dist
+worker/.wrangler
+.wrangler

@@ -15,7 +15,6 @@ const defaultState = (): AppState => ({
   role: new URLSearchParams(location.search).get('role') === 'reviewer' ? 'reviewer' : 'volunteer',
   questSource: 'loading',
   checkErrors: [],
-  confirmOpen: false,
   toast: null,
 });
 

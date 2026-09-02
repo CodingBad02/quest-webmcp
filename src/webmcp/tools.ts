@@ -1,14 +1,14 @@
 /**
- * The five WebMCP tools. Each is a thin wrapper over an impl function the UI also calls.
- * Agent does logistics. Human does the work.
+ * Quest's adapter to @gatherlight/quest-tools. Every operation is a thin wrapper over
+ * a shared function the UI also calls, via controller.run(). Agent does logistics. Human does the work.
  */
+import { createDialogConfirm, createQuestTools, result, safeText } from '@gatherlight/quest-tools';
 import { activeQuest, getState, nextId, openQuest, setState, toast, upsertContribution } from '../state/store';
 import { broadcast } from '../channel/broadcast';
 import { validate } from '../validators';
-import type { AppState, Contribution, Quest } from '../types';
-import { syncTools, text, type ToolDef } from './registry';
+import type { Contribution, ContributionPayload, Quest } from '../types';
 
-// ---------- impl: find ----------
+// ---------- find ----------
 
 export interface FindArgs { minutesAvailable?: number; skills?: string[]; languages?: string[]; remoteOnly?: boolean; type?: string }
 
@@ -37,83 +37,116 @@ export function findQuestsImpl(args: FindArgs): Quest[] {
   return pool.sort((a, b) => score(b) - score(a)).filter((q) => { const k = `${q.type}:${q.placeName}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 5);
 }
 
-// ---------- impl: check ----------
+const fmtQuest = (q: Quest, i: number) =>
+  `${i + 1}. ${safeText(q.title)} (about ${q.estimatedMinutes} min, ${q.remote ? 'from home' : 'in person'}${q.address ? ', ' + safeText(q.address) : ''}) [${q.type}] id=${q.id}`;
 
-export function checkImpl(): { ok: boolean; errors: string[] } {
-  const s = getState();
-  const q = activeQuest();
-  if (!q || !s.draft) return { ok: false, errors: ['No quest is open. Open a quest first.'] };
-  const errors = validate(s.draft);
-  setState({ checkErrors: errors, workspace: errors.length ? 'in-workspace' : 'checked' });
-  return { ok: errors.length === 0, errors };
-}
+// ---------- check: the confirmation summary the volunteer filled ----------
 
-// ---------- impl: submit (awaits the human click) ----------
+const CHECKED_BY_LABEL: Record<string, string> = { phone: 'Phone call', visit: 'In-person visit', website: 'Website', '': 'Not stated' };
+const WHEELCHAIR_LABEL: Record<string, string> = { yes: 'Yes', limited: 'Limited', no: 'No', '': 'Not stated' };
 
-type ConfirmReason = 'confirmed' | 'declined' | 'timeout';
-let pendingConfirm: ((reason: ConfirmReason) => void) | null = null;
-
-function settleConfirm(reason: ConfirmReason) {
-  setState({ confirmOpen: false });
-  pendingConfirm?.(reason);
-  pendingConfirm = null;
-}
-
-/** Called by the dialog's own buttons and its `onCancel` (Esc, backdrop). */
-export function resolveConfirm(ok: boolean) {
-  settleConfirm(ok ? 'confirmed' : 'declined');
-}
-
-function requestConfirm(timeoutMs = 90_000): Promise<ConfirmReason> {
-  if (pendingConfirm) settleConfirm('declined');
-  setState({ confirmOpen: true });
-  return new Promise((resolve) => {
-    const t = setTimeout(() => settleConfirm('timeout'), timeoutMs);
-    pendingConfirm = (reason) => { clearTimeout(t); resolve(reason); };
-  });
-}
-
-export type SubmitResult = { ok: true; contribution: Contribution } | { ok: false; reason: 'invalid' | 'declined' | 'timeout' | 'no-quest'; errors?: string[] };
-
-export async function submitImpl(opts: { viaUi?: boolean } = {}): Promise<SubmitResult> {
-  const q = activeQuest();
-  const s = getState();
-  if (!q || !s.draft) return { ok: false, reason: 'no-quest' };
-  const errors = validate(s.draft);
-  if (errors.length) { setState({ checkErrors: errors, workspace: 'in-workspace' }); return { ok: false, reason: 'invalid', errors }; }
-  if (!opts.viaUi) {
-    const reason = await requestConfirm();
-    if (reason !== 'confirmed') return { ok: false, reason };
+function summaryFields(payload: ContributionPayload): [string, string][] {
+  if (payload.kind === 'verify-hours') {
+    return [
+      ['Opening hours', payload.openingHours || 'Not stated'],
+      ['Checked by', CHECKED_BY_LABEL[payload.verifiedBy]],
+    ];
   }
-  const existing = s.contributions.find((c) => c.questId === q.id && c.status === 'rejected');
-  const contribution: Contribution = {
-    id: existing?.id ?? nextId('c'),
-    questId: q.id,
-    questTitle: q.title,
-    volunteerName: s.profile.name || 'A volunteer',
-    payload: s.draft,
-    status: 'submitted',
-    checkErrors: [],
-    submittedAt: new Date().toISOString(),
-  };
-  upsertContribution(contribution);
-  setState({ workspace: 'submitted' });
-  broadcast({ type: 'contribution:submitted', contributionId: contribution.id, questId: q.id });
-  toast(`Sent to a reviewer: ${q.placeName}.`);
-  return { ok: true, contribution };
+  const fields: [string, string][] = [['Wheelchair access', WHEELCHAIR_LABEL[payload.wheelchair]]];
+  if (payload.note.trim()) fields.push(['Note', safeText(payload.note)]);
+  return fields;
 }
 
-// ---------- impl: review ----------
+// ---------- the controller ----------
 
-export function approveImpl(contributionId: string, comment?: string): { ok: boolean; message: string } {
-  const s = getState();
-  const c = s.contributions.find((x) => x.id === contributionId);
-  if (!c || c.status !== 'submitted') return { ok: false, message: 'No submitted contribution with that id. Refresh the review queue and try again.' };
-  const reviewerName = s.profile.name || 'Reviewer';
-  upsertContribution({ ...c, status: 'approved', reviewedAt: new Date().toISOString(), reviewerName, reviewComment: comment?.slice(0, 200) });
-  broadcast({ type: 'contribution:approved', contributionId, questId: c.questId, reviewerName });
-  return { ok: true, message: `Approved. A star lit for "${c.questTitle}". The volunteer was told.` };
-}
+export const controller = createQuestTools({
+  protocol: 'quest/1',
+  operations: {
+    find(input) {
+      const list = findQuestsImpl(input as FindArgs);
+      if (!list.length) return result('available', 'No quests fit. Try more minutes, or allow in-person quests.');
+      return result('available', `Found ${list.length} quests:\n${list.map(fmtQuest).join('\n')}`);
+    },
+
+    open(input) {
+      const id = String((input as { id?: string }).id ?? '');
+      if (!openQuest(id)) return result('invalid', `No quest with id "${id}". Call find-quests to get current ids.`);
+      const q = activeQuest()!;
+      const how = q.type === 'verify-hours'
+        ? 'The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00".'
+        : 'The volunteer photographs the entrance and marks wheelchair access yes, limited, or no.';
+      return result('open', `Opened "${safeText(q.title)}". ${how} The volunteer does this part. When the form is filled, call check-contribution.`, { questId: id });
+    },
+
+    check() {
+      const s = getState();
+      const q = activeQuest();
+      if (!q || !s.draft) return result('invalid', 'No quest is open. Open a quest first.');
+      const errors = validate(s.draft);
+      setState({ checkErrors: errors, workspace: errors.length ? 'in-workspace' : 'checked' });
+      if (errors.length) return result('invalid', `Not ready. Fix these:\n${errors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`);
+      return {
+        ...result('checked', 'Ready. All checks passed. Ask the volunteer if they want to submit, then call submit-contribution.'),
+        confirm: {
+          summary: summaryFields(s.draft),
+          destination: "Quest's review queue",
+          visibility: 'Held for review. Not public yet.',
+          license: 'Open Database License (ODbL)',
+        },
+      };
+    },
+
+    // The package owns check -> confirm -> check -> submit. This just writes the contribution.
+    submit() {
+      const q = activeQuest();
+      const s = getState();
+      if (!q || !s.draft) return result('invalid', 'Not submitted. No quest is open. Call open-quest first.');
+      const existing = s.contributions.find((c) => c.questId === q.id && c.status === 'rejected');
+      const contribution: Contribution = {
+        id: existing?.id ?? nextId('c'),
+        questId: q.id,
+        questTitle: q.title,
+        volunteerName: s.profile.name || 'A volunteer',
+        payload: s.draft,
+        status: 'submitted',
+        checkErrors: [],
+        submittedAt: new Date().toISOString(),
+      };
+      upsertContribution(contribution);
+      setState({ workspace: 'submitted' });
+      broadcast({ type: 'contribution:submitted', contributionId: contribution.id, questId: q.id });
+      toast(`Sent to a reviewer: ${safeText(q.placeName)}.`);
+      return result('submitted', `Submitted "${safeText(q.title)}" for review. A star lights when a reviewer approves it.`, { contributionId: contribution.id });
+    },
+
+    approve(input) {
+      const { contributionId, comment } = input;
+      const s = getState();
+      const c = s.contributions.find((x) => x.id === contributionId);
+      if (!c || c.status !== 'submitted') return result('invalid', 'No submitted contribution with that id. Refresh the review queue and try again.');
+      const reviewerName = s.profile.name || 'Reviewer';
+      upsertContribution({ ...c, status: 'approved', reviewedAt: new Date().toISOString(), reviewerName, reviewComment: comment?.slice(0, 200) });
+      broadcast({ type: 'contribution:approved', contributionId, questId: c.questId, reviewerName });
+      return result('approved', `Approved. A star lit for "${safeText(c.questTitle)}". The volunteer was told.`, { contributionId });
+    },
+  },
+
+  available() {
+    const s = getState();
+    if (s.role === 'reviewer') return { approve: s.contributions.some((c) => c.status === 'submitted') };
+    const open = s.workspace === 'in-workspace' || s.workspace === 'checked';
+    return {
+      find: true,
+      open: true,
+      check: open ? true : { locked: 'Unlocks when a quest is open.' },
+      submit: s.workspace === 'checked' ? true : { locked: 'Unlocks after check-contribution passes.' },
+    };
+  },
+
+  confirm: createDialogConfirm(),
+});
+
+// ---------- reject: a UI-only store action, not a tool (SPEC.md) ----------
 
 export function rejectImpl(contributionId: string, comment: string) {
   const s = getState();
@@ -121,114 +154,4 @@ export function rejectImpl(contributionId: string, comment: string) {
   if (!c || c.status !== 'submitted') return;
   upsertContribution({ ...c, status: 'rejected', reviewedAt: new Date().toISOString(), reviewerName: s.profile.name || 'Reviewer', reviewComment: comment.slice(0, 200) });
   broadcast({ type: 'contribution:rejected', contributionId, questId: c.questId, comment });
-}
-
-// ---------- tool definitions ----------
-
-const fmtQuest = (q: Quest, i: number) =>
-  `${i + 1}. ${q.title} (about ${q.estimatedMinutes} min, ${q.remote ? 'from home' : 'in person'}${q.address ? ', ' + q.address : ''}) [${q.type}] id=${q.id}`;
-
-export const findQuestsTool: ToolDef = {
-  name: 'find-quests',
-  description: 'Find real community micro-tasks near central Bengaluru that fit the time a volunteer has, their skills, and whether they can go out. Each quest fixes one missing fact in OpenStreetMap. Returns up to five quests with ids. Open one with open-quest.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      minutesAvailable: { type: 'number', description: 'Minutes the volunteer has free right now' },
-      skills: { type: 'array', items: { type: 'string' }, description: 'What they can do: phone, photo, visit' },
-      remoteOnly: { type: 'boolean', description: 'True if the volunteer cannot go outside' },
-      type: { type: 'string', enum: ['verify-hours', 'access-photo'], description: 'Limit to one quest type' },
-    },
-  },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
-  async execute(input) {
-    const list = findQuestsImpl(input as FindArgs);
-    if (!list.length) return text('No quests fit. Try more minutes, or allow in-person quests.');
-    return text(`Found ${list.length} quests:\n${list.map(fmtQuest).join('\n')}`);
-  },
-};
-
-export const openQuestTool: ToolDef = {
-  name: 'open-quest',
-  description: 'Open one quest in the workspace so the volunteer can do the work. Pass the id from find-quests. After this, check-contribution becomes available.',
-  inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Quest id from find-quests' } }, required: ['id'] },
-  async execute(input) {
-    const id = String((input as { id?: string }).id ?? '');
-    if (!openQuest(id)) return text(`No quest with id "${id}". Call find-quests to get current ids.`);
-    const q = activeQuest()!;
-    const how = q.type === 'verify-hours' ? 'The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00".'
-      : 'The volunteer photographs the entrance and marks wheelchair access yes, limited, or no.';
-    return text(`Opened "${q.title}". ${how} The volunteer does this part. When the form is filled, call check-contribution.`);
-  },
-};
-
-export const checkTool: ToolDef = {
-  name: 'check-contribution',
-  description: 'Check the open quest form for missing fields, wrong formats, and unclear language. Returns exactly what to fix, or confirms it is ready. When it passes, submit-contribution becomes available.',
-  inputSchema: { type: 'object', properties: {} },
-  annotations: { readOnlyHint: true },
-  async execute() {
-    const r = checkImpl();
-    if (r.ok) return text('Ready. All checks passed. Ask the volunteer if they want to submit, then call submit-contribution.');
-    return text(`Not ready. Fix these:\n${r.errors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`);
-  },
-};
-
-export const submitTool: ToolDef = {
-  name: 'submit-contribution',
-  description: 'Send the checked contribution to a human reviewer. This opens a confirm dialog in the app and waits up to 90 seconds for the volunteer to click Send. Nothing is sent without that click.',
-  inputSchema: { type: 'object', properties: {} },
-  async execute() {
-    const r = await submitImpl();
-    if (r.ok) return text(`Submitted "${r.contribution.questTitle}" for review. A star lights when a reviewer approves it.`);
-    if (r.reason === 'invalid') return text(`Not submitted. The form changed. Fix: ${r.errors?.[0]}`);
-    if (r.reason === 'declined') return text('Kept editing. Nothing was sent.');
-    if (r.reason === 'timeout') return text('No response in 90 seconds. Nothing was sent.');
-    return text('Not submitted. No quest is open. Call open-quest first.');
-  },
-};
-
-export const approveTool: ToolDef = {
-  name: 'approve-contribution',
-  description: 'As the reviewer, approve one submitted contribution after reading it. Lights a star in the shared constellation and notifies the volunteer. Pass the id shown in the review queue.',
-  inputSchema: {
-    type: 'object',
-    properties: { contributionId: { type: 'string', description: 'Id from the review queue' }, comment: { type: 'string', description: 'Optional short note to the volunteer' } },
-    required: ['contributionId'],
-  },
-  async execute(input) {
-    const { contributionId, comment } = input as { contributionId?: string; comment?: string };
-    return text(approveImpl(String(contributionId ?? ''), comment).message);
-  },
-};
-
-const ALL: ToolDef[] = [findQuestsTool, openQuestTool, checkTool, submitTool, approveTool];
-
-/** Which tools exist right now. Called on every state change. */
-export function syncToolsForState(s: AppState) {
-  const names: string[] = [];
-  if (s.role === 'reviewer') {
-    if (s.contributions.some((c) => c.status === 'submitted')) names.push('approve-contribution');
-  } else {
-    names.push('find-quests', 'open-quest');
-    if (s.workspace === 'in-workspace' || s.workspace === 'checked') names.push('check-contribution');
-    if (s.workspace === 'checked') names.push('submit-contribution');
-  }
-  syncTools(ALL, names);
-}
-
-// ---------- rack: locked rows (DESIGN.md §5) ----------
-
-export interface LockedTool { name: string; reason: string }
-
-/** Every operation Quest declares that is not currently registered still has an honest reason
- *  why not. The rack draws whatever this returns; it holds no product knowledge of its own. */
-const LOCK_REASONS: Record<string, string> = {
-  'check-contribution': 'Unlocks when a quest is open.',
-  'submit-contribution': 'Unlocks after check-contribution passes.',
-};
-
-export function lockedToolsForState(s: AppState): LockedTool[] {
-  if (s.role === 'reviewer') return [];
-  return Object.entries(LOCK_REASONS).map(([name, reason]) => ({ name, reason }));
 }

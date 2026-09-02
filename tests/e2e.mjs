@@ -48,6 +48,8 @@ const opened = await call(vol, 'open-quest', { id });
 await vol.waitForSelector('.workspace');
 names = await toolNames(vol);
 check('4. open-quest adds check-contribution', names.includes('check-contribution') && !names.includes('submit-contribution'), opened.slice(0, 60));
+const openedEnvelope = JSON.parse(opened.slice(opened.lastIndexOf('quest/1 ') + 8));
+check('4b. open-quest machine line reports state open with a questId', openedEnvelope.state === 'open' && Boolean(openedEnvelope.questId), JSON.stringify(openedEnvelope));
 await vol.screenshot({ path: `${SHOTS}/02-workspace.png` });
 
 const notReady = await call(vol, 'check-contribution');

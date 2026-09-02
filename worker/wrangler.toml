@@ -1,0 +1,22 @@
+name = "quest-store"
+main = "src/index.ts"
+compatibility_date = "2026-08-28"
+
+# Survey (the partner site) is served from this Worker's origin. Build it first: npm run build -w survey
+[assets]
+directory = "../survey/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]
+
+[vars]
+# Comma-separated origins allowed to call /api. Same-origin (Survey) is always allowed.
+ALLOWED_ORIGINS = "http://localhost:4173,http://localhost:5173"

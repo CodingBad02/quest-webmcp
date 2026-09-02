@@ -1,0 +1,29 @@
+{
+  "name": "@gatherlight/quest-tools",
+  "version": "0.1.0",
+  "description": "Five WebMCP verbs for human-led civic work: find, open, check, submit, approve. One import makes a site agent-ready for volunteering.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./qt.css": "./src/ui/qt.css"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test 'test/*.test.ts'"
+  },
+  "dependencies": {
+    "@mcp-b/webmcp-types": "^5.1.0"
+  },
+  "keywords": [
+    "webmcp",
+    "volunteering",
+    "civic",
+    "model-context"
+  ]
+}

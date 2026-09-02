@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { activeQuest, closeQuest, updateDraft, useAppState } from '../state/store';
-import { checkImpl, submitImpl } from '../webmcp/tools';
+import { controller } from '../webmcp/tools';
 import { StateChip } from './StateChip';
 import type { ContributionPayload } from '../types';
 
@@ -84,10 +84,10 @@ export function Workspace() {
       )}
 
       <div className="actions">
-        {ws === 'in-workspace' && <button className="btn" onClick={() => checkImpl()}>Check</button>}
+        {ws === 'in-workspace' && <button className="btn" onClick={() => { void controller.run('check', {}, { viaUi: true }); }}>Check</button>}
         {ws === 'checked' && (<>
           <StateChip state="checked" pulse />
-          <button className="btn primary" onClick={() => submitImpl({ viaUi: true })}>Send for review</button>
+          <button className="btn primary" onClick={() => { void controller.run('submit', {}, { viaUi: true }); }}>Send for review</button>
         </>)}
         {ws === 'submitted' && (<><StateChip state="submitted" pulse /><span className="muted">You will see it here when it is checked.</span></>)}
         {ws === 'approved' && <StateChip state="approved" pulse />}

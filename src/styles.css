@@ -1,6 +1,6 @@
 /* qt.css (DESIGN.md §2) ships the portable rack/dialog tokens and their component styles.
  * It must load first so Quest's own skin below can win the cascade. */
-@import './qt.css';
+@import '@gatherlight/quest-tools/qt.css';
 
 :root {
   /* Paper. Warm and quiet so the cold indigo sky above it reads as a different world. */
@@ -244,7 +244,7 @@ textarea { resize: vertical; }
 .checklist input { margin: 0; accent-color: var(--accent); }
 
 /* The confirmation dialog is `.qt.qt-confirm` (qt.css); its markup and copy live in
-   ConfirmModal.tsx per DESIGN.md §5a, §6. Nothing Quest-specific to add here. */
+   @gatherlight/quest-tools's createDialogConfirm per DESIGN.md §5a, §6. Nothing Quest-specific to add here. */
 @keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- Toast ---------- */

@@ -2,13 +2,12 @@ import { useEffect } from 'react';
 import { getState, reloadShared, setState, subscribe, toast, useAppState } from './state/store';
 import { buildCampaigns, loadQuests } from './data/overpass';
 import { onQuestEvent } from './channel/broadcast';
-import { syncToolsForState } from './webmcp/tools';
+import { controller } from './webmcp/tools';
 import { CapabilityRack } from './components/CapabilityRack';
 import { QuestList } from './components/QuestList';
 import { Workspace } from './components/Workspace';
 import { ReviewerQueue } from './components/ReviewerQueue';
 import { Sky } from './components/Sky';
-import { ConfirmModal } from './components/ConfirmModal';
 import { ProfileBar } from './components/ProfileBar';
 
 export default function App() {
@@ -18,9 +17,12 @@ export default function App() {
   const toastMsg = useAppState((s) => s.toast);
 
   useEffect(() => {
-    loadQuests().then(({ quests, source }) => setState({ quests, campaigns: buildCampaigns(quests), questSource: source }));
-    const unsubStore = subscribe(() => syncToolsForState(getState()));
-    syncToolsForState(getState());
+    loadQuests().then(({ quests, source }) => {
+      setState({ quests, campaigns: buildCampaigns(quests), questSource: source });
+      controller.refresh();
+    });
+    const unsubStore = subscribe(() => controller.refresh());
+    controller.refresh();
     const unsubEvents = onQuestEvent((e) => {
       reloadShared();
       const s = getState();
@@ -70,7 +72,6 @@ export default function App() {
         </aside>
       </main>
 
-      <ConfirmModal />
       <div className="toast-region" role="status" aria-live="polite">{toastMsg && <div className="toast">{toastMsg}</div>}</div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { setState, useAppState } from '../state/store';
-import { approveImpl, rejectImpl } from '../webmcp/tools';
+import { controller, rejectImpl } from '../webmcp/tools';
 import { StateChip } from './StateChip';
 import type { Contribution } from '../types';
 
@@ -26,7 +26,7 @@ function Item({ c }: { c: Contribution }) {
       <div className="actions">
         <input className="grow" value={comment} placeholder="Optional note to the volunteer" onChange={(e) => setComment(e.target.value)} />
         <button className="btn" onClick={() => { if (!comment.trim()) { alert('Say what to fix.'); return; } rejectImpl(c.id, comment.trim()); }}>Send back</button>
-        <button className="btn primary" onClick={() => approveImpl(c.id, comment.trim() || undefined)}>Approve</button>
+        <button className="btn primary" onClick={() => { void controller.run('approve', { contributionId: c.id, comment: comment.trim() || undefined }, { viaUi: true }); }}>Approve</button>
       </div>
     </li>
   );
