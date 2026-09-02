@@ -94,9 +94,9 @@ export function Sky({ size }: { size: SkyMode }) {
   useEffect(() => {
     const h = handleRef.current;
     if (!ready || !h || !layout) return;
-    h.setLayout(layout.stars, layout.edges, dims.w, dims.h);
+    h.setLayout(layout.stars, layout.edges, dims.w, dims.h, size);
     h.setLit(litIds, false);
-  }, [ready, layout, dims]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, layout, dims, size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ignition: lit set changes while mounted animate; the first read does not.
   useEffect(() => {

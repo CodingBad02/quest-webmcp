@@ -2,31 +2,51 @@
  * The living sky. Imperative Three.js scene behind Sky.tsx, loaded on demand so the form app's
  * main chunk stays lean. World units are CSS pixels at z = 0; the camera sits D px away so star
  * sizes, halo sizes and parallax are all reasoned about in pixels.
+ *
+ * Depth: place stars sit in a band around the z = 0 plane; the camera orbits a pivot behind that
+ * plane, so near stars swing further than far ones and the dust field behind the pivot counter-moves.
  */
 import * as THREE from 'three';
-import type { PlacedStar } from './skyLayout';
+import { rng, type PlacedStar, type SkyMode } from './skyLayout';
 
 // Exact hex in, exact hex out: no sRGB/linear conversion for a 2D sky. Must run before any Color is built.
 THREE.ColorManagement.enabled = false;
 
 const D = 2000;
+/** The camera orbits this depth. Behind the star band, so every place star moves the same way, just at different speeds. */
+const PIVOT_Z = -270;
 const HALO_PX = 64;
-const HALO_REST = 0.7;
+const HALO_PEAK = 0.75;
+const HALO_BREATH = 0.08;
+const HALO_BREATH_S = 4;
 const IGNITE_MS = 600;
 const EDGE_DELAY_MS = 250;
 const EDGE_MS = 400;
-const DRIFT_PERIOD_S = 61;
-const PARALLAX_PX = 4;
+const ORBIT_PERIOD_S = 70;
+/** Yaw / pitch amplitude of the slow orbit, degrees, per mode. */
+const ORBIT_DEG: Record<SkyMode, [number, number]> = { hero: [3.5, 1.5], band: [1.5, 0.65] };
+/** Pointer parallax as camera swing, degrees at full pointer deflection: ~22 px near stars, ~6 px far stars. */
+const PARALLAX_DEG = 1.45;
+/** Extra world offset on the dust field per pointer unit, so the background reads as further back than any star. */
+const DUST_SHIFT = 14;
+const DUST_COUNT = 1200;
+const DUST_Z = [-600, -200];
+const GLOW_ALPHA = 0.06;
+const GLOW_Z = -260;
 const PICK_PX = 16;
+const DEG = Math.PI / 180;
 
 const SKY_TOP = new THREE.Color(0x070912);
 const SKY_HORIZON = new THREE.Color(0x0e1326);
 const FOG = new THREE.Color(0x0b1020);
 const COLD = new THREE.Color(0xdbe3f8);
 const GOLD = new THREE.Color(0xffd166);
+const DUST = new THREE.Color(0xc9d6ff);
+const GLOW_COLD = new THREE.Color(0xc7d3f2);
+const GLOW_GOLD = new THREE.Color(0xffd166);
 
 export interface SkyHandle {
-  setLayout(stars: PlacedStar[], edges: [number, number][], w: number, h: number): void;
+  setLayout(stars: PlacedStar[], edges: [number, number][], w: number, h: number, mode: SkyMode): void;
   /** Lit quest ids. `animate` runs the ignition for stars that were unlit a moment ago. */
   setLit(lit: Set<string>, animate: boolean): void;
   /** Pointer in canvas CSS px, or null when it leaves. Drives parallax. */
@@ -41,21 +61,20 @@ export interface SkyHandle {
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 
-function haloTexture() {
+function radialTexture(stops: [number, number][]) {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d')!;
   const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.18, 'rgba(255,255,255,.62)');
-  grad.addColorStop(0.5, 'rgba(255,255,255,.14)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  for (const [at, a] of stops) grad.addColorStop(at, `rgba(255,255,255,${a})`);
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.NoColorSpace;
   return t;
 }
+const haloTexture = () => radialTexture([[0, 1], [0.18, 0.62], [0.5, 0.14], [1, 0]]);
+const glowTexture = () => radialTexture([[0, 1], [0.3, 0.45], [0.6, 0.12], [1, 0]]);
 
 const STAR_VERT = /* glsl */ `
 attribute float aSize; attribute float aSeed; attribute float aLit; attribute float aPop;
@@ -63,11 +82,12 @@ uniform float uScale;
 varying float vSeed; varying float vLit; varying float vDepth;
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aSize * (1.0 + aPop) * uScale / -mvPosition.z;
+  gl_PointSize = aSize * (1.0 + aPop) * (1.0 + 0.34 * aLit) * uScale / -mvPosition.z;
   gl_Position = projectionMatrix * mvPosition;
   vSeed = aSeed; vLit = aLit; vDepth = -mvPosition.z;
 }`;
 
+// Unlit: ~5 px core with a 2 px soft edge on a 9 px point. Lit: ~8 px core on a 12 px point.
 const STAR_FRAG = /* glsl */ `
 precision highp float;
 uniform vec3 uCold; uniform vec3 uGold; uniform float uTime; uniform float uFogNear; uniform float uFogFar;
@@ -75,12 +95,34 @@ varying float vSeed; varying float vLit; varying float vDepth;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c) * 2.0;
-  float core = 1.0 - smoothstep(0.45, 1.0, d);
+  float core = 1.0 - smoothstep(mix(0.55, 0.66, vLit), 1.0, d);
   float twinkle = 0.74 + 0.26 * sin(uTime * (0.7 + vSeed * 1.5) + vSeed * 37.0);
-  float alpha = core * mix(0.72 * twinkle, 1.0, vLit);
+  float alpha = core * mix(0.9 * twinkle, 1.0, vLit);
   float fog = smoothstep(uFogNear, uFogFar, vDepth);
-  alpha *= 1.0 - 0.6 * fog;
+  alpha *= 1.0 - 0.3 * fog * (1.0 - vLit);
   gl_FragColor = vec4(mix(uCold, uGold, vLit), alpha);
+}`;
+
+// Dust: constant screen size, never perspective-scaled, so it stays a texture and never reads as a place.
+const DUST_VERT = /* glsl */ `
+attribute float aSize; attribute float aAlpha; attribute float aSeed;
+uniform float uPx; uniform float uTime;
+varying float vAlpha;
+void main() {
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = aSize * uPx;
+  gl_Position = projectionMatrix * mvPosition;
+  vAlpha = aAlpha * (0.9 + 0.1 * sin(uTime * (0.25 + aSeed * 0.5) + aSeed * 61.0));
+}`;
+
+const DUST_FRAG = /* glsl */ `
+precision highp float;
+uniform vec3 uColor;
+varying float vAlpha;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float d = length(c) * 2.0;
+  gl_FragColor = vec4(uColor, (1.0 - smoothstep(0.4, 1.0, d)) * vAlpha);
 }`;
 
 const BG_VERT = /* glsl */ `
@@ -113,6 +155,8 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   scene.fog = new THREE.Fog(FOG, D - 60, D + 520);
   const camera = new THREE.PerspectiveCamera(30, 1, 200, 4000);
   camera.position.set(0, 0, D);
+  const pivot = new THREE.Vector3(0, 0, PIVOT_Z);
+  const orbitR = D - PIVOT_Z;
 
   // Background gradient, drawn in clip space behind everything.
   const bgMat = new THREE.ShaderMaterial({
@@ -124,29 +168,64 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   bg.renderOrder = -10;
   scene.add(bg);
 
+  // Air: one big soft additive glow behind each campaign's centroid.
+  const glowTex = glowTexture();
+  const glows: THREE.Sprite[] = [];
+
+  // Dust: a wide, deep field of tiny points. Not places, never picked, never counted.
+  const dustGeo = new THREE.BufferGeometry();
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: { uPx: { value: 1 }, uTime: { value: 0 }, uColor: { value: DUST } },
+    vertexShader: DUST_VERT, fragmentShader: DUST_FRAG, transparent: true, depthWrite: false, depthTest: false,
+  });
+  const dust = new THREE.Points(dustGeo, dustMat);
+  dust.frustumCulled = false;
+  dust.renderOrder = -5;
+  scene.add(dust);
+  const dustUnit = new Float32Array(DUST_COUNT * 3); // x,y in -1..1 of the view at that depth; z in world px
+  const dustPos = new Float32Array(DUST_COUNT * 3);
+  {
+    const r = rng('sky-dust');
+    const size = new Float32Array(DUST_COUNT), alpha = new Float32Array(DUST_COUNT), seed = new Float32Array(DUST_COUNT);
+    for (let i = 0; i < DUST_COUNT; i++) {
+      dustUnit[i * 3] = r() * 2 - 1;
+      dustUnit[i * 3 + 1] = r() * 2 - 1;
+      dustUnit[i * 3 + 2] = DUST_Z[0] + r() * (DUST_Z[1] - DUST_Z[0]);
+      size[i] = 1 + r() * 0.6;
+      alpha[i] = 0.18 + r() * 0.22;
+      seed[i] = r();
+    }
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    dustGeo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    dustGeo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+    dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  }
+
   // Stars.
   const starGeo = new THREE.BufferGeometry();
   const starMat = new THREE.ShaderMaterial({
     uniforms: {
       uScale: { value: D }, uTime: { value: 0 }, uCold: { value: COLD }, uGold: { value: GOLD },
-      uFogNear: { value: D - 140 }, uFogFar: { value: D + 320 },
+      uFogNear: { value: D - 140 }, uFogFar: { value: D + 140 },
     },
     vertexShader: STAR_VERT, fragmentShader: STAR_FRAG, transparent: true, depthWrite: false, depthTest: false,
   });
   const points = new THREE.Points(starGeo, starMat);
   points.frustumCulled = false;
+  points.renderOrder = 2;
   scene.add(points);
 
-  // Edges: faint tree, and the gold tree that draws in when both ends are lit.
+  // Edges: faint tree, and the gold tree that draws in when both ends are lit. Endpoints are the stars' 3D positions.
   const edgeGeo = new THREE.BufferGeometry();
-  const edgeMat = new THREE.LineBasicMaterial({ color: 0xeef1f8, transparent: true, opacity: 0.085, depthWrite: false, depthTest: false });
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0xeef1f8, transparent: true, opacity: 0.28, depthWrite: false, depthTest: false });
   const edgeLines = new THREE.LineSegments(edgeGeo, edgeMat);
   edgeLines.frustumCulled = false;
   scene.add(edgeLines);
   const litEdgeGeo = new THREE.BufferGeometry();
-  const litEdgeMat = new THREE.LineBasicMaterial({ color: GOLD, transparent: true, opacity: 0.5, depthWrite: false, depthTest: false });
+  const litEdgeMat = new THREE.LineBasicMaterial({ color: GOLD, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false });
   const litEdgeLines = new THREE.LineSegments(litEdgeGeo, litEdgeMat);
   litEdgeLines.frustumCulled = false;
+  litEdgeLines.renderOrder = 1;
   scene.add(litEdgeLines);
 
   // Halos: one additive sprite per star, shown only when lit.
@@ -158,6 +237,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   let stars: PlacedStar[] = [];
   let edges: [number, number][] = [];
   let width = 1, height = 1;
+  let mode: SkyMode = 'hero';
   let world = new Float32Array(0);        // xyz per star
   let aSize = new Float32Array(0);
   let aLit = new Float32Array(0);
@@ -175,6 +255,44 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   const pointerNow = new THREE.Vector2(0, 0);
   let paused = false, destroyed = false, frame = 0;
 
+  function rebuildDust() {
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const z = dustUnit[i * 3 + 2];
+      const k = ((D - z) / D) * 1.15; // fill the view at this depth, with margin for the orbit
+      dustPos[i * 3] = dustUnit[i * 3] * (width / 2) * k;
+      dustPos[i * 3 + 1] = dustUnit[i * 3 + 1] * (height / 2) * k;
+      dustPos[i * 3 + 2] = z;
+    }
+    (dustGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
+  function rebuildGlows() {
+    const groups = new Map<string, { x: number; y: number; n: number; placed: boolean; x0: number; x1: number }>();
+    for (const s of stars) {
+      const g = groups.get(s.campaignId) ?? { x: 0, y: 0, n: 0, placed: true, x0: Infinity, x1: -Infinity };
+      g.x += s.x; g.y += s.y; g.n++; g.placed &&= s.placed; g.x0 = Math.min(g.x0, s.x); g.x1 = Math.max(g.x1, s.x);
+      groups.set(s.campaignId, g);
+    }
+    const list = [...groups.values()];
+    while (glows.length < list.length) {
+      const m = new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, opacity: GLOW_ALPHA });
+      const sp = new THREE.Sprite(m);
+      sp.renderOrder = -6;
+      scene.add(sp);
+      glows.push(sp);
+    }
+    while (glows.length > list.length) { const sp = glows.pop()!; scene.remove(sp); sp.material.dispose(); }
+    const k = (D - GLOW_Z) / D;
+    list.forEach((g, i) => {
+      const sp = glows[i];
+      const span = Math.max(g.x1 - g.x0, 120);
+      const size = Math.min(span * 1.6, Math.max(height * 1.6, 260)) * k;
+      sp.position.set((g.x / g.n - width / 2) * k, (height / 2 - g.y / g.n) * k, GLOW_Z);
+      sp.scale.set(size, size, 1);
+      sp.material.color = g.placed ? GLOW_COLD : GLOW_GOLD;
+    });
+  }
+
   function rebuildBuffers() {
     const n = stars.length;
     world = new Float32Array(n * 3);
@@ -186,7 +304,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       world[i * 3] = (s.x - width / 2) * k;
       world[i * 3 + 1] = (height / 2 - s.y) * k;
       world[i * 3 + 2] = s.z;
-      aSize[i] = 4.2 + s.seed * 2.2;
+      aSize[i] = (9 + s.seed * 1.4) * (1 + 0.22 * Math.max(-1, Math.min(1, s.z / 140)));
       const lit = litIds.has(s.questId);
       nextLit[i] = lit ? 1 : 0;
       nextLitAt[i] = lit ? -1 : NaN;
@@ -219,11 +337,14 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       const m = new THREE.SpriteMaterial({ map: halo, color: GOLD, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, opacity: 0 });
       const sp = new THREE.Sprite(m);
       sp.visible = false;
+      sp.renderOrder = 3;
       haloGroup.add(sp);
       sprites.push(sp);
     }
     while (sprites.length > n) { const sp = sprites.pop()!; haloGroup.remove(sp); sp.material.dispose(); }
     for (let i = 0; i < n; i++) sprites[i].position.set(world[i * 3], world[i * 3 + 1], world[i * 3 + 2]);
+    rebuildDust();
+    rebuildGlows();
     animating = true;
     paint(elapsedMs());
   }
@@ -244,7 +365,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       const scale = HALO_PX * (0.35 + 0.65 * e) * (1 + 0.4 * Math.sin(Math.PI * p));
       sp.visible = true;
       sp.scale.set(scale, scale, 1);
-      sp.material.opacity = HALO_REST * e;
+      sp.material.opacity = HALO_PEAK * e;
     }
     (starGeo.getAttribute('aLit') as THREE.BufferAttribute).needsUpdate = true;
     (starGeo.getAttribute('aPop') as THREE.BufferAttribute).needsUpdate = true;
@@ -263,6 +384,18 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     animating = busy;
   }
 
+  /** Steady lit halos breathe; ignitions in flight are owned by paint(). */
+  function breathe(t: number) {
+    const w = (t / HALO_BREATH_S) * Math.PI * 2;
+    for (let i = 0; i < stars.length; i++) {
+      if (litAt[i] !== -1) continue;
+      const b = Math.sin(w + stars[i].seed * Math.PI * 2);
+      const scale = HALO_PX * (1 + HALO_BREATH * b);
+      sprites[i].scale.set(scale, scale, 1);
+      sprites[i].material.opacity = HALO_PEAK * (1 - HALO_BREATH * 0.75 * (1 - b) * 0.5);
+    }
+  }
+
   function render() {
     if (destroyed) return;
     frame = requestAnimationFrame(render);
@@ -270,11 +403,23 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     const now = elapsedMs();
     const t = now / 1000;
     if (animating) paint(now);
+    breathe(t);
     starMat.uniforms.uTime.value = t;
-    const w = (t / DRIFT_PERIOD_S) * Math.PI * 2;
-    pointerNow.lerp(pointerTarget, 0.05);
-    camera.position.x = 10 * Math.sin(w) - pointerNow.x * PARALLAX_PX;
-    camera.position.y = 6 * Math.cos(w) - pointerNow.y * PARALLAX_PX;
+    dustMat.uniforms.uTime.value = t;
+    pointerNow.lerp(pointerTarget, 0.09);
+    // Slow orbit around the pivot plus the pointer swing. Pointer right moves the camera left, so the
+    // constellation follows the pointer and the dust behind the pivot counter-moves.
+    const w = (t / ORBIT_PERIOD_S) * Math.PI * 2;
+    const [yawA, pitchA] = ORBIT_DEG[mode];
+    const yaw = (yawA * Math.sin(w) - pointerNow.x * PARALLAX_DEG) * DEG;
+    const pitch = (pitchA * Math.sin(2 * w + 0.8) + pointerNow.y * PARALLAX_DEG) * DEG;
+    camera.position.set(
+      pivot.x + orbitR * Math.sin(yaw) * Math.cos(pitch),
+      pivot.y + orbitR * Math.sin(pitch),
+      pivot.z + orbitR * Math.cos(yaw) * Math.cos(pitch),
+    );
+    camera.lookAt(pivot);
+    dust.position.set(-pointerNow.x * DUST_SHIFT, pointerNow.y * DUST_SHIFT, 0);
     renderer.render(scene, camera);
   }
 
@@ -287,13 +432,14 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
 
   const v3 = new THREE.Vector3();
   return {
-    setLayout(nextStars, nextEdges, w, h) {
-      stars = nextStars; edges = nextEdges; width = Math.max(1, w); height = Math.max(1, h);
+    setLayout(nextStars, nextEdges, w, h, nextMode) {
+      stars = nextStars; edges = nextEdges; width = Math.max(1, w); height = Math.max(1, h); mode = nextMode;
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.fov = (2 * Math.atan(height / 2 / D) * 180) / Math.PI;
       camera.updateProjectionMatrix();
       starMat.uniforms.uScale.value = D * renderer.getPixelRatio();
+      dustMat.uniforms.uPx.value = renderer.getPixelRatio();
       rebuildBuffers();
     },
     setLit(lit, animate) {
@@ -337,8 +483,10 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       canvas.removeEventListener('webglcontextlost', onLost);
       canvas.removeEventListener('webglcontextrestored', onRestored);
       for (const sp of sprites) sp.material.dispose();
-      halo.dispose();
+      for (const sp of glows) sp.material.dispose();
+      halo.dispose(); glowTex.dispose();
       starGeo.dispose(); starMat.dispose();
+      dustGeo.dispose(); dustMat.dispose();
       edgeGeo.dispose(); edgeMat.dispose();
       litEdgeGeo.dispose(); litEdgeMat.dispose();
       bg.geometry.dispose(); bgMat.dispose();

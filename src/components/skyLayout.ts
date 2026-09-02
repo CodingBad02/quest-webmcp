@@ -14,6 +14,8 @@ export type SkyMode = 'hero' | 'band';
 export const CENTER = { lat: 12.9716, lon: 77.5946 };
 export const PANEL_GAP = 40;
 const PANEL_PAD = 20;
+/** Half-width of the depth band around the constellation plane, world px. The band is short, so it gets less. */
+export const Z_SPREAD: Record<SkyMode, number> = { hero: 140, band: 60 };
 
 export interface StarNode {
   questId: string;
@@ -24,8 +26,10 @@ export interface StarNode {
   u: number;
   /** north, 0..1 within the panel */
   v: number;
-  /** depth jitter in world px, negative is farther */
+  /** depth jitter, -1..1 (negative is farther). placeStars scales it to world px per mode; the SVG fallback ignores it. */
   z: number;
+  /** true when the quest has real coordinates (the Bengaluru panels); false for the seeded rewrite cluster */
+  placed: boolean;
   /** stable 0..1 per star, drives twinkle phase and size */
   seed: number;
 }
@@ -39,6 +43,7 @@ export interface SkyModel {
   panels: SkyPanel[];
 }
 
+/** `z` here is world px around the constellation plane, already scaled by mode. */
 export interface PlacedStar extends StarNode { x: number; y: number }
 
 export interface PlacedLayout {
@@ -110,8 +115,9 @@ export function buildSkyModel(campaigns: Campaign[], quests: Quest[]): SkyModel 
         u = 0.22 + r() * 0.56;
         v = 0.18 + r() * 0.64;
       }
-      const z = (r() - 0.55) * 280;
-      stars.push({ questId: id, campaignId: c.id, placeName: q.placeName, gap: GAP_TEXT[q.type], u, v, z, seed });
+      const hasPlace = q.lat != null && q.lon != null;
+      const z = r() * 2 - 1;
+      stars.push({ questId: id, campaignId: c.id, placeName: q.placeName, gap: GAP_TEXT[q.type], u, v, z, placed: hasPlace, seed });
       local.push({ u, v });
     }
     for (const [a, b] of mst(local)) edges.push([start + a, start + b]);
@@ -138,9 +144,10 @@ export function placeStars(model: SkyModel, w: number, h: number, mode: SkyMode)
   const pad = Math.min(PANEL_PAD, colW * 0.08);
   const panels = model.panels.map((_, i) => { const x0 = gutter + i * (colW + PANEL_GAP); return { x0, x1: x0 + colW }; });
   const panelIndex = new Map(model.panels.map((p, i) => [p.campaignId, i]));
+  const zSpread = Z_SPREAD[mode];
   const stars = model.stars.map((s) => {
     const p = panels[panelIndex.get(s.campaignId) ?? 0];
-    return { ...s, x: p.x0 + pad + s.u * (colW - pad * 2), y: top + (1 - s.v) * usableH };
+    return { ...s, x: p.x0 + pad + s.u * (colW - pad * 2), y: top + (1 - s.v) * usableH, z: s.z * zSpread };
   });
   return { stars, edges: model.edges, panels };
 }
