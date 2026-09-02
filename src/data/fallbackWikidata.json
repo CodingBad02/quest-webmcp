@@ -1,0 +1,792 @@
+{
+  "head" : {
+    "vars" : [ "item", "itemLabel", "prop", "propLabel", "value", "statement" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2443381"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q2443381-eb3a961a-4eca-2dd7-8bf4-29f6b6a8f61a"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1884-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Karnataka High Court"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q3067635"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q3067635-e9b7a1d9-40c7-a67e-3d6c-8815435caf43"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1987-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "National Law School of India University"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4673527"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q4673527-ccfca42b-45a7-10f8-4f30-55ebd11fedb3"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2000-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Acharya Institute of Technology"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4702185"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q4702185-910f2de3-4807-2c20-bbf1-199ebb451f49"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1983-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Al-Ameen College of Pharmacy"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q7123837"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q7123837-A5B27F0D-E6D0-47B3-A1AC-7A9F3088523F"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1959-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Padma Seshadri Bala Bhavan"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q5886431"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q5886431-0E941ADB-D78D-4964-8344-6A08301653C5"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1851-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Holy Trinity Church, Bangalore"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q6365386"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q6365386-95bb1727-4371-011d-1f47-cef0e4b64d61"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1966-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Kanteerava Studios"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q6467288"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q6467288-169ffcd7-431d-1a43-f65f-165ee01d8239"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1993-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Laboratory for Electro-Optics Systems"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q6958577"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q6958577-17CA3EB7-DA09-4911-BED8-9E7FCE1083B6"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1995-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Nagarjuna Vidyaniketan"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q17991850"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q17991850-4520f772-4613-1d9a-f3ee-cc23d25cf6d7"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1994-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "International Institute of Hotel Management"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q18559724"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q18559724-3165833c-4945-683d-e36d-58a3025d0b44"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2011-09-14T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Wikimedia India"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q27019730"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q27019730-132e0225-4af2-2da2-10da-bf785bac4c55"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1994-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Good As You"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q19898544"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q19898544-d7f941eb-41cc-76a6-61e5-2995acf99584"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1986-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Swami Vivekananda Yoga Anusandhana Samsthana"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q111942945"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q111942945-68bcad95-418f-774d-b902-65ed6475eef9"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2003-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Indus International School, Bangalore"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q131308310"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q131308310-ecefc14a-437d-66ff-22e2-5afb16bc0105"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2019-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Indian Music Experience Museum"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q134027295"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q134027295-c57ce73b-4305-b2a3-f9b4-3a4b73ead24e"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2012-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Bangalore Literature Festival"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q135094950"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q135094950-bb22df2d-42b0-8087-1dda-b0707be23d7e"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2024-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Science Gallery Bengaluru"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q55637038"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q55637038-6c8cc32c-4c43-104b-96be-80e65fe694d4"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1999-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Vemana Institute of Technology"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q65042994"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q65042994-36786276-48cd-053c-8878-40a0d5f12663"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2019-01-30T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Human Space Flight Centre"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q77977463"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q77977463-c166724d-4a81-f290-6120-af7d480191a1"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2017-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "East Point College of Medical Sciences"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q96756422"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q96756422-2cc41903-4d62-ff62-4169-2acaa550e79a"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2013-05-30T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Radio City Freedom Awards"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q97183425"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q97183425-59e90020-44d8-ba25-1146-32787de52879"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1866-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Equestrian statue of Mark Cubbon"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q99454646"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q99454646-31b782c4-4528-6b83-8911-71b2c163e61c"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2018-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Conrad Bengaluru"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q137757837"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q137757837-0a81750a-457f-8396-4f33-96443033423b"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "1992-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "AJAX Engineering"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q138588802"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q138588802-47ef7f2f-45ac-5fdf-3fda-21e0d28fbd82"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2021-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Global Bioscience Solutions"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q116971904"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q116971904-362a89ed-45b7-af6b-942c-e78311f6b436"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2018-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Atria University"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q139857897"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q139857897-B5B4A823-6E1A-49B3-BD42-BF5BD58E2FB5"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2025-01-01T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Nexus Learning Labs"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    }, {
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q141143534"
+      },
+      "statement" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/statement/Q141143534-b4272123-48ea-a9b3-1a1a-c12361802e24"
+      },
+      "value" : {
+        "datatype" : "http://www.w3.org/2001/XMLSchema#dateTime",
+        "type" : "literal",
+        "value" : "2024-02-15T00:00:00Z"
+      },
+      "prop" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/P571"
+      },
+      "itemLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "DoubleTree by Hilton Bengaluru Whitefield"
+      },
+      "propLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "inception"
+      }
+    } ]
+  }
+}

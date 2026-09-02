@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { setState, useAppState } from '../state/store';
 import { controller, rejectImpl } from '../webmcp/tools';
+import { store, SURVEY_URL } from '../state/storeClient';
 import { StateChip } from './StateChip';
 import type { Contribution } from '../types';
 
@@ -8,6 +9,12 @@ const CHECKS: Record<string, string[]> = {
   'verify-hours': ['Hours parse as valid syntax', 'Method of checking is plausible', 'Note is specific', 'No personal data', 'Plausible for this kind of place'],
   'access-photo': ['Photo shows the entrance', 'No faces or number plates', 'Access value matches the photo', 'Note explains "limited"', 'Location fits the quest'],
 };
+
+/** Open the approved edit in iD on the Survey origin. A stage handoff: single use, 15 minutes, no upload. */
+async function stageInId(c: Contribution) {
+  const { handoff } = await store.issueHandoff(c.id, new URL(SURVEY_URL).origin, 900, 'stage');
+  window.open(`${SURVEY_URL}id.html?handoff=${handoff}`, '_blank', 'noopener');
+}
 
 function Item({ c }: { c: Contribution }) {
   const [comment, setComment] = useState('');
@@ -36,7 +43,7 @@ export function ReviewerQueue() {
   const contributions = useAppState((s) => s.contributions);
   const profile = useAppState((s) => s.profile);
   const pending = contributions.filter((c) => c.status === 'submitted');
-  const done = contributions.filter((c) => c.status !== 'submitted');
+  const done = contributions.filter((c) => ['approved', 'rejected', 'stale', 'landed'].includes(c.status));
 
   return (
     <div className="queue">
@@ -47,7 +54,12 @@ export function ReviewerQueue() {
       <div className="field inline"><label htmlFor="rname">Your first name</label><input id="rname" value={profile.name} placeholder="Tom" maxLength={30} onChange={(e) => setState({ profile: { ...profile, name: e.target.value } })} /></div>
       {pending.length === 0 ? <div className="empty">Nothing waiting. Submissions from the volunteer tab appear here live.</div> : <ul className="reviews">{pending.map((c) => <Item key={c.id} c={c} />)}</ul>}
       {done.length > 0 && (
-        <div className="mine"><h2>Reviewed</h2><ul>{done.map((c) => <li key={c.id} className="mine-item"><StateChip state={c.status} /> {c.questTitle} · {c.volunteerName}</li>)}</ul></div>
+        <div className="mine"><h2>Reviewed</h2><ul>{done.map((c) => (
+          <li key={c.id} className="mine-item">
+            <StateChip state={c.status} /> {c.questTitle} · {c.volunteerName}
+            {c.status === 'approved' && <button className="btn small" type="button" onClick={() => { void stageInId(c); }}>Stage in iD</button>}
+          </li>
+        ))}</ul></div>
       )}
     </div>
   );
