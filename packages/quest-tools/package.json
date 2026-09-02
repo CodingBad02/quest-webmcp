@@ -12,7 +12,9 @@
     "./qt.css": "./src/ui/qt.css"
   },
   "files": [
-    "src"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test 'test/*.test.ts'"
@@ -25,5 +27,13 @@
     "volunteering",
     "civic",
     "model-context"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodingBad02/quest-webmcp.git",
+    "directory": "packages/quest-tools"
+  }
 }
