@@ -236,21 +236,28 @@ textarea { resize: vertical; }
 .check-row { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; }
 .check-row input { margin: 0; accent-color: var(--accent); }
 
-/* ---------- Knowledge graph (DESIGN.md §8): the Wikidata sibling to the sky. Entities on a
-   deterministic ring, one edge per claim to a small terminal mark standing for its source.
-   Sits on the paper surface, not the night sky. */
-.kg { margin-top: 40px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
-.kg-svg { display: block; width: 100%; height: 320px; }
-.kg-node { fill: var(--surface-3); stroke: var(--muted); stroke-width: 1.2; }
-.kg-label { font-family: var(--sans); font-size: 10px; fill: var(--muted); }
+/* ---------- Knowledge graph (DESIGN.md §8): the Wikidata sibling to the sky. Entities in two
+   deterministic rows, one edge per claim to a small terminal mark standing for its source. A
+   quiet editorial section on the paper surface — a hairline rule, not a card — so it reads as a
+   map of sources, not a form. */
+.kg { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--border); }
+.kg-caption { margin: 2px 0 0; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.kg-key { margin: 18px 0 4px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.kg-key li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.kg-key-swatch[data-state="none"] { fill: none; stroke: var(--muted); stroke-width: 1; }
+.kg-key-swatch[data-state="approved"] { fill: none; stroke: var(--star-lit); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.kg-key-swatch[data-state="landed"] { fill: var(--star-lit); stroke: var(--star-lit); }
+.kg-svg { display: block; width: 100%; height: auto; margin-top: 8px; }
+@media (max-width: 640px) { .kg { overflow-x: auto; } .kg-svg { min-width: 640px; } }
+.kg-node { fill: var(--surface); stroke: var(--muted); stroke-width: 1.25; }
+.kg-label { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
 .kg-edge { stroke: var(--border); stroke-width: 1; }
-.kg-terminal { fill: none; stroke: var(--border); stroke-width: 1; transform-box: fill-box; transform-origin: center; }
-.kg-claim[data-state="approved"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.5; stroke-dasharray: 4 3; }
-.kg-claim[data-state="approved"] .kg-terminal { stroke: var(--star-lit); stroke-width: 1.5; }
-.kg-claim[data-state="landed"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.5; }
+.kg-terminal { fill: none; stroke: var(--muted); stroke-width: 1; transform-box: fill-box; transform-origin: center; }
+.kg-claim[data-state="approved"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.kg-claim[data-state="approved"] .kg-terminal { stroke: var(--star-lit); stroke-width: 1.75; }
+.kg-claim[data-state="landed"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.75; }
 .kg-claim[data-state="landed"] .kg-terminal { stroke: var(--star-lit); fill: var(--star-lit); }
 .kg-claim-pulse .kg-terminal { animation: kg-pulse 500ms var(--ease-out); }
-.kg-caption { margin-top: 8px; font-family: var(--mono); }
 @keyframes kg-pulse { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ---------- Capability rack: Quest's layout wrapper around the portable .qt-rack (qt.css owns
