@@ -34,7 +34,8 @@ export function findQuestsImpl(args: FindArgs): Quest[] {
     n += Math.max(0, 5 - Math.abs(q.estimatedMinutes - minutes / 2) / 5);
     return n;
   };
-  return pool.sort((a, b) => score(b) - score(a)).slice(0, 5);
+  const seen = new Set<string>();
+  return pool.sort((a, b) => score(b) - score(a)).filter((q) => { const k = `${q.type}:${q.placeName}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 5);
 }
 
 // ---------- impl: check ----------

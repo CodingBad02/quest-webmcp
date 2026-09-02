@@ -1,15 +1,24 @@
 import { openQuest, useAppState } from '../state/store';
 import { findQuestsImpl } from '../webmcp/tools';
+import type { JSX } from 'react';
 import type { Quest, QuestType } from '../types';
 
-const ICON: Record<QuestType, string> = { 'verify-hours': '☏', 'access-photo': '⧉', 'plain-rewrite': '¶' };
+const ICON: Record<QuestType, JSX.Element> = {
+  // Handset: confirm hours by calling.
+  'verify-hours': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 4h3.5l1.5 4-2.2 1.5a10 10 0 0 0 6.7 6.7L16 14l4 1.5V19a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z" /></svg>,
+  // Doorway with a level threshold: step-free entry.
+  'access-photo': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 20V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14" /><path d="M3 20h18" /><circle cx="14.5" cy="12" r=".9" fill="currentColor" /></svg>,
+  // Text lines that get shorter: a plain rewrite.
+  'plain-rewrite': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 11h12M4 16h8" /></svg>,
+};
 const KIND: Record<QuestType, string> = { 'verify-hours': 'Confirm hours', 'access-photo': 'Step-free entry', 'plain-rewrite': 'Plain rewrite' };
 
 function Card({ q }: { q: Quest }) {
   return (
     <li>
       <button className="card" onClick={() => openQuest(q.id)}>
-        <span className={`kind kind-${q.type}`}><span aria-hidden="true">{ICON[q.type]}</span> {KIND[q.type]}</span>
+        <span className={`card-glyph kind-${q.type}`} aria-hidden="true">{ICON[q.type]}</span>
+        <span className={`kind kind-${q.type}`}>{KIND[q.type]}</span>
         <strong className="card-title">{q.placeName}</strong>
         <span className="card-meta">
           about {q.estimatedMinutes} min · {q.remote ? 'from home' : 'in person'}{q.address ? ` · ${q.address}` : ''}

@@ -33,22 +33,22 @@ export function Workspace() {
     <div className="workspace" data-state={ws}>
       <button className="back" onClick={closeQuest}>← All quests</button>
       <div className="section-head">
-        <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : q.type === 'access-photo' ? 'Step-free entry' : 'Plain rewrite'}</span>
         <h1>{q.placeName}</h1>
         <p className="muted">
-          {q.address && <>{q.address} · </>}
+          <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : q.type === 'access-photo' ? 'Step-free entry' : 'Plain rewrite'}</span>
+          {q.address && <span>{q.address}</span>}
           {q.osmLink && <a href={q.osmLink} target="_blank" rel="noreferrer">View on OpenStreetMap</a>}
           {q.sourceUrl && <a href={q.sourceUrl} target="_blank" rel="noreferrer">Source page</a>}
-          {q.sourceLicense && <> · {q.sourceLicense}</>}
+          {q.sourceLicense && <span>{q.sourceLicense}</span>}
         </p>
       </div>
 
-      <div className="steps" aria-label="Progress">
-        <span className={ws === 'in-workspace' ? 'on' : 'done'}>1 Do the work</span>
-        <span className={ws === 'checked' ? 'on' : ws === 'in-workspace' ? '' : 'done'}>2 Check</span>
-        <span className={ws === 'submitted' ? 'on' : ws === 'approved' ? 'done' : ''}>3 Review</span>
-        <span className={ws === 'approved' ? 'on' : ''}>4 Star</span>
-      </div>
+      <ol className="steps" aria-label="Progress">
+        <Step n={1} label="Do the work" state={ws === 'in-workspace' ? 'on' : 'done'} />
+        <Step n={2} label="Check" state={ws === 'checked' ? 'on' : ws === 'in-workspace' ? '' : 'done'} />
+        <Step n={3} label="Review" state={ws === 'submitted' ? 'on' : ws === 'approved' ? 'done' : ''} />
+        <Step n={4} label="Star" state={ws === 'approved' ? 'on' : ''} />
+      </ol>
 
       <fieldset className="form" disabled={locked}>
         {draft.kind === 'verify-hours' && (
@@ -106,6 +106,17 @@ export function Workspace() {
         {ws === 'approved' && <span className="ok">Approved. Your star is lit.</span>}
       </div>
     </div>
+  );
+}
+
+function Step({ n, label, state }: { n: number; label: string; state: '' | 'on' | 'done' }) {
+  return (
+    <li className={`step ${state}`} aria-current={state === 'on' ? 'step' : undefined}>
+      <span className="step-dot" aria-hidden="true">
+        {state === 'done' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : n}
+      </span>
+      <span className="step-label">{label}</span>
+    </li>
   );
 }
 

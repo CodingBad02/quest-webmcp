@@ -10,7 +10,7 @@ function rng(seed: string) {
 
 function layout(c: Campaign, w: number, h: number) {
   const r = rng(c.id);
-  const pts = c.questIds.map((id) => ({ id, x: 12 + r() * (w - 24), y: 8 + r() * (h - 16) }));
+  const pts = c.questIds.map((id) => ({ id, x: 16 + r() * (w - 32), y: 12 + r() * (h - 24) }));
   // minimum spanning tree, Prim
   const edges: [number, number][] = [];
   if (pts.length > 1) {
@@ -33,21 +33,22 @@ function Sky({ c, contributions, w, h, compact }: { c: Campaign; contributions: 
   const [hover, setHover] = useState<string | null>(null);
   const lit = new Map(contributions.filter((x) => x.status === 'approved').map((x) => [x.questId, x]));
   const litCount = pts.filter((p) => lit.has(p.id)).length;
+  const who = hover ? lit.get(hover) : undefined;
   return (
     <div className={`sky ${compact ? 'compact' : ''}`}>
-      <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label={`${c.name}: ${litCount} of ${pts.length} stars lit`}>
-        <defs><filter id={`glow-${c.id}`} x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3" /></filter></defs>
-        {edges.map(([a, b], i) => {
-          const on = lit.has(pts[a].id) && lit.has(pts[b].id);
-          return <line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} className={`edge ${on ? 'on' : ''}`} />;
-        })}
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`${c.name}: ${litCount} of ${pts.length} stars lit`}>
+        <defs><filter id={`glow-${c.id}`} x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="5" /></filter></defs>
+        {edges.map(([a, b], i) => <line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} className="edge" />)}
+        {edges.map(([a, b], i) => (lit.has(pts[a].id) && lit.has(pts[b].id))
+          ? <line key={`on-${i}`} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} pathLength={1} className="edge on" />
+          : null)}
         {pts.map((p) => {
           const c2 = lit.get(p.id);
           return (
             <g key={p.id} className={`star ${c2 ? 'lit' : ''}`} onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(p.id)} onBlur={() => setHover(null)} tabIndex={0}>
-              {c2 && <circle cx={p.x} cy={p.y} r={7} className="halo" filter={`url(#glow-${c.id})`} />}
-              <circle cx={p.x} cy={p.y} r={c2 ? 3.6 : 2.6} className="core" />
-              <circle cx={p.x} cy={p.y} r={10} fill="transparent" />
+              {c2 && <circle cx={p.x} cy={p.y} r={12} className="halo" filter={`url(#glow-${c.id})`} />}
+              <circle cx={p.x} cy={p.y} r={c2 ? 5.5 : 3.5} className="core" />
+              <circle cx={p.x} cy={p.y} r={14} fill="transparent" />
             </g>
           );
         })}
@@ -55,7 +56,7 @@ function Sky({ c, contributions, w, h, compact }: { c: Campaign; contributions: 
       <div className="sky-cap">
         <span className="sky-name">{c.name}</span>
         <span className="sky-count">{litCount} / {pts.length}</span>
-        {hover && lit.get(hover) && <span className="sky-who">Lit by {lit.get(hover)!.volunteerName}. Reviewed by {lit.get(hover)!.reviewerName}.</span>}
+        {who && <span className="sky-who">Lit by {who.volunteerName}. Reviewed by {who.reviewerName}.</span>}
       </div>
     </div>
   );
@@ -67,7 +68,7 @@ export function ConstellationStrip() {
   if (!campaigns.length) return <div className="strip" />;
   return (
     <div className="strip" aria-label="Shared constellations">
-      {campaigns.map((c) => <Sky key={c.id} c={c} contributions={contributions} w={260} h={64} compact />)}
+      {campaigns.map((c) => <Sky key={c.id} c={c} contributions={contributions} w={400} h={80} compact />)}
     </div>
   );
 }

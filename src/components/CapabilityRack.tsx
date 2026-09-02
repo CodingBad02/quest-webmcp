@@ -19,10 +19,12 @@ function Item({ r }: { r: RackItem }) {
     <li className={`tool tool-${r.status}`} tabIndex={0} aria-label={`${r.name}: ${r.status}`}>
       <span className="tool-dot" aria-hidden="true" />
       <div className="tool-body">
-        <code className="tool-name">{r.name}</code>
+        <div className="tool-row">
+          <code className="tool-name">{r.name}</code>
+          {r.status === 'new' && <span className="tool-tag">New</span>}
+        </div>
         <span className="tool-desc">{r.status === 'executing' ? 'Running…' : r.status === 'removing' ? 'No longer needed' : LABEL[r.name] ?? r.description}</span>
       </div>
-      {r.status === 'new' && <span className="tool-tag">New</span>}
     </li>
   );
 }
@@ -49,10 +51,12 @@ export function CapabilityRack() {
           <li key={name} className="tool tool-locked" tabIndex={0} aria-label={`${name}: locked. ${l.when}`}>
             <span className="tool-dot" aria-hidden="true" />
             <div className="tool-body">
-              <code className="tool-name">{name}</code>
+              <div className="tool-row">
+                <code className="tool-name">{name}</code>
+                <svg className="tool-lock" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2Zm-8-2a3 3 0 0 1 6 0v2H9V7Z" /></svg>
+              </div>
               <span className="tool-desc">{l.when}</span>
             </div>
-            <svg className="tool-lock" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2Zm-8-2a3 3 0 0 1 6 0v2H9V7Z" /></svg>
           </li>
         ))}
         {empty && <li className="tool tool-empty">approve-contribution appears when something is waiting for review.</li>}

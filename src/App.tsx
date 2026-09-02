@@ -41,12 +41,13 @@ export default function App() {
     return () => { unsubStore(); unsubEvents(); window.removeEventListener('storage', onStorage); };
   }, []);
 
-  const otherRole = role === 'reviewer' ? '' : '?role=reviewer';
+  const base = import.meta.env.BASE_URL;
+  const otherRole = role === 'reviewer' ? base : `${base}?role=reviewer`;
 
   return (
     <div className="app" data-role={role}>
       <header className="topbar">
-        <a className="brand" href={role === 'reviewer' ? '?role=reviewer' : '/'} aria-label="Quest home">
+        <a className="brand" href={role === 'reviewer' ? `${base}?role=reviewer` : base} aria-label="Quest home">
           <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="3" fill="currentColor" /><circle cx="4" cy="6" r="1.6" fill="currentColor" opacity=".55" /><circle cx="18" cy="5" r="1.3" fill="currentColor" opacity=".55" /><circle cx="17" cy="17" r="1.6" fill="currentColor" opacity=".55" /><path d="M11 11L4 6M11 11l7-6M11 11l6 6" stroke="currentColor" strokeWidth=".8" opacity=".4" /></svg>
           <span>Quest</span>
         </a>
@@ -55,7 +56,7 @@ export default function App() {
         </span>
         <span className="spacer" />
         {!hasWebMCP && <span className="pill warn" title="Enable chrome://flags/#enable-webmcp-testing or use the ChatGPT desktop browser">WebMCP off. Manual mode</span>}
-        <a className="pill link" href={otherRole || '/'} target="_blank" rel="noreferrer">
+        <a className="pill link" href={otherRole} target="_blank" rel="noreferrer">
           {role === 'reviewer' ? 'Open volunteer tab' : 'Open reviewer tab'}
         </a>
       </header>
