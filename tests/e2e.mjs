@@ -93,8 +93,8 @@ const revToolsAfter = await toolNames(rev);
 check('8c. approve-contribution unregisters when the queue empties', revToolsAfter.length === 0);
 
 await vol.bringToFront();
-await vol.waitForSelector('.star.lit', { timeout: 5000 });
-const litCount = await vol.$$eval('.star.lit', (e) => e.length);
+await vol.waitForSelector('.sky-root[data-lit="1"]', { timeout: 5000 });
+const litCount = Number(await vol.$eval('.sky-root', (e) => e.dataset.lit));
 const wsState = await vol.$eval('.workspace', (e) => e.dataset.state);
 check('8d. volunteer tab lights a star and shows approved via BroadcastChannel', litCount === 1 && wsState === 'approved', `lit=${litCount} state=${wsState}`);
 await vol.waitForTimeout(600);

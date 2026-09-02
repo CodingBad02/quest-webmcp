@@ -2,7 +2,6 @@
 
 Source of truth: SPEC.md Part A. Edit there, regenerate here.
 
-
 ## A1. One sentence
 
 Quest turns "I have twenty minutes and want to help" into one real, checkable community contribution, with a browser agent doing the logistics and a person doing the work.
@@ -70,7 +69,8 @@ export interface Star {
 
 9. **`find-quests` registers on load.** The profile is optional. Tool arguments override profile values. A person with no profile can still ask the agent for a quest.
 10. **Rejection is a UI button, not a tool.** Keeps four tools. Each tool does one job.
-11. **Demo city is central Bengaluru.** Center 12.9716, 77.5946. About 100 candidate places within 1 km. Ship the pre-fetched JSON as fallback.
+11. **`open-quest` is the fifth tool.** Without it the agent cannot move the volunteer into a workspace. Verified in build: the agent-driven flow needs it. The four-tool count elsewhere in this document is superseded.
+12. **Demo city is central Bengaluru.** Center 12.9716, 77.5946. About 100 candidate places within 1 km. Ship the pre-fetched JSON as fallback.
 
 ## A6. What the agent can do on each screen
 
@@ -90,6 +90,3 @@ export interface Star {
 4. Approval in tab two lights a star in tab one within one second.
 5. Quests load from Overpass. When offline, they load from the fallback file.
 6. The full manual checklist in Part B section 14 passes on the deployed URL.
-
----
-

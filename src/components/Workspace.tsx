@@ -125,7 +125,7 @@ function Meter({ text }: { text: string }) {
   const pct = Math.min(100, Math.max(0, (g / 16) * 100));
   return (
     <div className="meter" aria-label={`Reading grade ${g.toFixed(1)}`}>
-      <div className="meter-bar"><span style={{ width: `${pct}%` }} className={g > 8 ? 'high' : ''} /></div>
+      <div className="meter-bar"><span style={{ transform: `scaleX(${pct / 100})` }} className={g > 8 ? 'high' : ''} /></div>
       <span className="meter-label">{text.trim() ? `Grade ${g.toFixed(1)} ${g > 8 ? '· aim for 8 or lower' : '· good'}` : 'Reading grade shows here'}</span>
     </div>
   );

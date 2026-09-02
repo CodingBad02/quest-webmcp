@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { hasWebMCP, useRack, type RackItem } from '../webmcp/registry';
 import { useAppState } from '../state/store';
 
@@ -30,37 +31,55 @@ function Item({ r }: { r: RackItem }) {
 }
 
 export function CapabilityRack() {
+  const [open, setOpen] = useState(false);
   const rack = useRack();
   const role = useAppState((s) => s.role);
   const live = new Set(rack.map((r) => r.name));
   const locked = role === 'volunteer' ? Object.entries(LOCKED).filter(([n]) => !live.has(n)) : [];
   const empty = role === 'reviewer' && rack.length === 0;
+  const count = rack.filter((r) => r.status !== 'removing').length;
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [open]);
 
   return (
-    <div className="rack">
-      <div className="rack-head">
-        <h2>What the agent can do now</h2>
-        <span className="rack-count">{rack.filter((r) => r.status !== 'removing').length}</span>
-      </div>
-      <p className="rack-sub">
-        {hasWebMCP ? 'Tools registered with the browser. They appear when the page state allows them.' : 'WebMCP is off in this browser. The same actions work from the buttons.'}
-      </p>
-      <ul className="rack-list">
-        {rack.map((r) => <Item key={r.name} r={r} />)}
-        {locked.map(([name, l]) => (
-          <li key={name} className="tool tool-locked" tabIndex={0} aria-label={`${name}: locked. ${l.when}`}>
-            <span className="tool-dot" aria-hidden="true" />
-            <div className="tool-body">
-              <div className="tool-row">
-                <code className="tool-name">{name}</code>
-                <svg className="tool-lock" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2Zm-8-2a3 3 0 0 1 6 0v2H9V7Z" /></svg>
+    <>
+      <button className="rack-trigger" type="button" aria-expanded={open} aria-controls="capability-rack" onClick={() => setOpen(true)}>
+        {count} {count === 1 ? 'tool' : 'tools'} ready
+      </button>
+      <button className={`rack-backdrop ${open ? 'open' : ''}`} type="button" aria-label="Close agent tools" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)} />
+      <div id="capability-rack" className={`rack ${open ? 'rack-open' : ''}`}>
+        <div className="rack-head">
+          <h2>What the agent can do now</h2>
+          <span className="rack-count">{count}</span>
+          <button className="rack-close" type="button" aria-label="Close agent tools" onClick={() => setOpen(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <p className="rack-sub">
+          {hasWebMCP ? 'Tools registered with the browser. They appear when the page state allows them.' : 'WebMCP is off in this browser. The same actions work from the buttons.'}
+        </p>
+        <ul className="rack-list" aria-live="polite" aria-relevant="all">
+          {rack.map((r) => <Item key={r.name} r={r} />)}
+          {locked.map(([name, l]) => (
+            <li key={name} className="tool tool-locked" tabIndex={0} aria-label={`${name}: locked. ${l.when}`}>
+              <span className="tool-dot" aria-hidden="true" />
+              <div className="tool-body">
+                <div className="tool-row">
+                  <code className="tool-name">{name}</code>
+                  <svg className="tool-lock" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v13h14V9h-2Zm-8-2a3 3 0 0 1 6 0v2H9V7Z" /></svg>
+                </div>
+                <span className="tool-desc">{l.when}</span>
               </div>
-              <span className="tool-desc">{l.when}</span>
-            </div>
-          </li>
-        ))}
-        {empty && <li className="tool tool-empty">approve-contribution appears when something is waiting for review.</li>}
-      </ul>
-    </div>
+            </li>
+          ))}
+          {empty && <li className="tool tool-empty">approve-contribution appears when something is waiting for review.</li>}
+        </ul>
+      </div>
+    </>
   );
 }

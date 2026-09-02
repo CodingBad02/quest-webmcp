@@ -41,7 +41,7 @@ export function QuestList() {
   return (
     <div className="questlist">
       <div className="section-head">
-        <h1>Quests that fit {profile.minutesAvailable} minutes</h1>
+        <h2 className="list-title">Quests that fit {profile.minutesAvailable} minutes</h2>
         <p className="muted">Each one fixes a real gap in the public map, or makes one help page easier to read. Ask your browser agent, or pick one.</p>
       </div>
       {matches.length === 0 ? (

@@ -8,7 +8,7 @@ import { CapabilityRack } from './components/CapabilityRack';
 import { QuestList } from './components/QuestList';
 import { Workspace } from './components/Workspace';
 import { ReviewerQueue } from './components/ReviewerQueue';
-import { ConstellationStrip } from './components/Constellation';
+import { Sky } from './components/Sky';
 import { ConfirmModal } from './components/ConfirmModal';
 import { ProfileBar } from './components/ProfileBar';
 
@@ -61,7 +61,7 @@ export default function App() {
         </a>
       </header>
 
-      <ConstellationStrip />
+      <Sky size={role === 'reviewer' || activeQuestId ? 'band' : 'hero'} />
 
       <main className="layout">
         <section className="work" aria-live="polite">
