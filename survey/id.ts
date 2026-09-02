@@ -100,10 +100,16 @@ async function boot() {
   } catch { /* fine */ }
   const context = iD.coreContext().assetPath(ID_ASSETS).containerNode(document.getElementById('id-container')!).embed(true).init();
 
+  // iD calls back once for the entity and once for its parent relations, in either order. Stage once, when the entity is there.
+  let staged = false;
+  let callbacks = 0;
   context.loadEntity(eid, (err) => {
+    if (staged) return;
     if (err) return say(`Could not load ${c.quest.osmRef} from OpenStreetMap. ${String(err)}`, 'warn');
     const entity = context.hasEntity(eid);
-    if (!entity) return say(`${c.quest.osmRef} is not in the editor yet. Zoom in and try again.`, 'warn');
+    callbacks++;
+    if (!entity) { if (callbacks >= 2) say(`${c.quest.osmRef} is not in the editor yet. Zoom in and try again.`, 'warn'); return; }
+    staged = true;
     const live = entity.version ? Number(entity.version) : undefined;
     if (c.quest.osmVersion !== undefined && live !== undefined && live !== c.quest.osmVersion) {
       context.zoomToEntity(eid);

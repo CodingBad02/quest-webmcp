@@ -224,6 +224,29 @@ const exchangeAgain = await fetch(`${STORE}/api/handoffs/exchange`, {
 });
 check('15. Exchanging the same handoff a second time returns 410', exchangeAgain.status === 410, String(exchangeAgain.status));
 
+// ---------- iD staging (SPEC.md P0-last iD embed): approved edit lands in iD's history, never uploaded ----------
+const stageRes = await fetch(`${STORE}/api/handoffs`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', 'x-session': 'e2e-reviewer' },
+  body: JSON.stringify({ contributionId: submittedApEnvelope.contributionId, targetOrigin: SURVEY_ORIGIN, ttlSeconds: 300, action: 'stage' }),
+});
+const stageBody = await stageRes.json();
+check('15b. a stage handoff can be minted for the approved contribution', stageRes.status === 201 && Boolean(stageBody.handoff), String(stageRes.status));
+const idPage = await ctx.newPage();
+idPage.on('pageerror', (e) => console.log('[id pageerror]', e.message.slice(0, 160)));
+await idPage.goto(`${SURVEY_ORIGIN}/id.html?handoff=${stageBody.handoff}`);
+let idStatus = '';
+for (let i = 0; i < 60 && !/Staged|changed on OpenStreetMap|Could not|not in the editor|proposes no|no OpenStreetMap/.test(idStatus); i++) {
+  await idPage.waitForTimeout(1000);
+  idStatus = (await idPage.textContent('#status')) ?? '';
+}
+await idPage.screenshot({ path: `${SHOTS}/09-id-staged.png` });
+// Staged, or an honest version conflict, are both correct. Anything else is a failure.
+check('15c. iD loads the live element and stages the diff without uploading (or reports a version conflict)', /^Staged, not uploaded|changed on OpenStreetMap/.test(idStatus), idStatus.slice(0, 90));
+const idEdits = await idPage.title();
+check('15d. iD shows one unsaved edit in its title', /^\(1\)/.test(idEdits) || /changed on OpenStreetMap/.test(idStatus), idEdits.slice(0, 40));
+await idPage.close();
+
 // ---------- Wikidata adapter: cite-claim (SPEC.md P0-last Wikidata) ----------
 
 await vol.bringToFront();
