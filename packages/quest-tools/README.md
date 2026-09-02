@@ -57,7 +57,7 @@ button.onclick = () => tools.run('submit', {}, { viaUi: true });
 - **The `quest/1` envelope.** Every result is text ending in one machine line: `quest/1 {"ok":true,"state":"checked","questId":"…","next":{"url":"…","handoff":"…"}}`. `parseResult(text)` reads it back. Ten states: `available open invalid checked declined submitted approved rejected stale landed`.
 - **Cross-site continuation.** `open` may return `next: { url, handoff }`. The agent navigates; the receiving origin exchanges the handoff and registers its own verbs.
 - **Budgets.** Names ≤ 30, descriptions ≤ 500, parameter descriptions ≤ 150, output ≤ 1,500 characters. Enforced at create time and on every result.
-- **Untrusted content.** `find` and `open` are annotated `untrustedContentHint`; `safeText()` strips control characters and caps external strings.
+- **Untrusted content.** Every tool is annotated `untrustedContentHint`, since any result can carry text a person or another site typed; `safeText()` strips control characters and caps external strings.
 
 ## API
 
@@ -79,6 +79,6 @@ Styling: link `@gatherlight/quest-tools/qt.css` and, optionally, override `--qt-
 npm test
 ```
 
-Twelve contract tests under `node --test`: exact names and budgets, registration by state, envelope round trip, the submit order, one pending confirmation, cancellation, UI and tool parity, optional verbs.
+Thirteen contract tests under `node --test`: exact names and budgets, registration by state, envelope round trip, the submit order, one pending confirmation, cancellation, UI and tool parity, optional verbs.
 
 MIT. Part of [Quest](https://github.com/CodingBad02/quest-webmcp).
