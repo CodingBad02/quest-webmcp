@@ -146,10 +146,16 @@ export function placeStars(model: SkyModel, w: number, h: number, mode: SkyMode)
   return { stars, edges: model.edges, panels };
 }
 
-// TODO(DESIGN.md §8): the sky is still a binary lit/unlit grammar keyed off `approved`. v2 adds a
-// third truth — `approved` (reviewed, outlined ring) vs `landed` (source accepted, filled + glow)
-// are different facts and must not render the same. `landed` has no producer yet (P1 write-back),
-// so this stays a two-state map until skyScene.ts and Constellation.tsx grow a second lit tier.
-export function litMap(contributions: Contribution[]) {
-  return new Map(contributions.filter((c) => c.status === 'approved').map((c) => [c.questId, c]));
+/** DESIGN.md §8: three truths, not two. `approved` (reviewed, not yet landed) renders as an
+ *  outlined ring; `landed` (the source accepted the write) renders filled with a halo. Nothing
+ *  lands in P0 (write-back is P1), so every approval today renders at tier 1. */
+export type StarTier = 1 | 2;
+
+export function starTiers(contributions: Contribution[]): Map<string, { tier: StarTier; contribution: Contribution }> {
+  const m = new Map<string, { tier: StarTier; contribution: Contribution }>();
+  for (const c of contributions) {
+    if (c.status === 'approved') m.set(c.questId, { tier: 1, contribution: c });
+    else if (c.status === 'landed') m.set(c.questId, { tier: 2, contribution: c });
+  }
+  return m;
 }

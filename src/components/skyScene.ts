@@ -7,7 +7,7 @@
  * plane, so near stars swing further than far ones and the dust field behind the pivot counter-moves.
  */
 import * as THREE from 'three';
-import { rng, type PlacedStar, type SkyMode } from './skyLayout';
+import { rng, type PlacedStar, type SkyMode, type StarTier } from './skyLayout';
 
 // Exact hex in, exact hex out: no sRGB/linear conversion for a 2D sky. Must run before any Color is built.
 THREE.ColorManagement.enabled = false;
@@ -47,8 +47,9 @@ const GLOW_GOLD = new THREE.Color(0xffd166);
 
 export interface SkyHandle {
   setLayout(stars: PlacedStar[], edges: [number, number][], w: number, h: number, mode: SkyMode): void;
-  /** Lit quest ids. `animate` runs the ignition for stars that were unlit a moment ago. */
-  setLit(lit: Set<string>, animate: boolean): void;
+  /** Star tiers by quest id: 1 approved (outlined ring), 2 landed (filled + halo). Absent = available.
+   *  `animate` runs the ignition for a star whose tier increases since the previous call. */
+  setLit(tiers: Map<string, StarTier>, animate: boolean): void;
   /** Pointer in canvas CSS px, or null when it leaves. Drives parallax. */
   pointer(x: number | null, y: number | null): void;
   /** Nearest star within reach of a canvas point, or -1. */
@@ -77,30 +78,38 @@ const haloTexture = () => radialTexture([[0, 1], [0.18, 0.62], [0.5, 0.14], [1, 
 const glowTexture = () => radialTexture([[0, 1], [0.3, 0.45], [0.6, 0.12], [1, 0]]);
 
 const STAR_VERT = /* glsl */ `
-attribute float aSize; attribute float aSeed; attribute float aLit; attribute float aPop;
+attribute float aSize; attribute float aSeed; attribute float aTier; attribute float aPop;
 uniform float uScale;
-varying float vSeed; varying float vLit; varying float vDepth;
+varying float vSeed; varying float vTier; varying float vDepth;
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aSize * (1.0 + aPop) * (1.0 + 0.34 * aLit) * uScale / -mvPosition.z;
+  float grown = clamp(aTier, 0.0, 1.0);
+  gl_PointSize = aSize * (1.0 + aPop) * (1.0 + 0.34 * grown) * uScale / -mvPosition.z;
   gl_Position = projectionMatrix * mvPosition;
-  vSeed = aSeed; vLit = aLit; vDepth = -mvPosition.z;
+  vSeed = aSeed; vTier = aTier; vDepth = -mvPosition.z;
 }`;
 
-// Unlit: ~5 px core with a 2 px soft edge on a 9 px point. Lit: ~8 px core on a 12 px point.
+// aTier is continuous 0..2 so an ignition crossfades between looks rather than snapping:
+// tier 0 a small twinkling cold dot, tier 1 a gold outlined ring (approved, no fill, no halo),
+// tier 2 a solid gold dot (landed; the halo sprite carries its glow, drawn separately).
 const STAR_FRAG = /* glsl */ `
 precision highp float;
 uniform vec3 uCold; uniform vec3 uGold; uniform float uTime; uniform float uFogNear; uniform float uFogFar;
-varying float vSeed; varying float vLit; varying float vDepth;
+varying float vSeed; varying float vTier; varying float vDepth;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c) * 2.0;
-  float core = 1.0 - smoothstep(mix(0.55, 0.66, vLit), 1.0, d);
   float twinkle = 0.74 + 0.26 * sin(uTime * (0.7 + vSeed * 1.5) + vSeed * 37.0);
-  float alpha = core * mix(0.9 * twinkle, 1.0, vLit);
+  float core0 = (1.0 - smoothstep(0.55, 0.66, d)) * 0.9 * twinkle;
+  float ring1 = smoothstep(0.32, 0.42, d) * (1.0 - smoothstep(0.56, 0.66, d));
+  float core2 = 1.0 - smoothstep(0.55, 0.66, d);
+  float w1 = clamp(vTier, 0.0, 1.0);
+  float w2 = clamp(vTier - 1.0, 0.0, 1.0);
+  float alpha = mix(mix(core0, ring1, w1), core2, w2);
+  vec3 color = mix(uCold, uGold, w1);
   float fog = smoothstep(uFogNear, uFogFar, vDepth);
-  alpha *= 1.0 - 0.3 * fog * (1.0 - vLit);
-  gl_FragColor = vec4(mix(uCold, uGold, vLit), alpha);
+  alpha *= 1.0 - 0.3 * fog * (1.0 - w1);
+  gl_FragColor = vec4(color, alpha);
 }`;
 
 // Dust: constant screen size, never perspective-scaled, so it stays a texture and never reads as a place.
@@ -228,7 +237,9 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   litEdgeLines.renderOrder = 1;
   scene.add(litEdgeLines);
 
-  // Halos: one additive sprite per star, shown only when lit.
+  // Halos: one additive sprite per star, shown only for a landed (tier 2) star. Approved (tier 1)
+  // gets the ring in the fragment shader above and nothing more — DESIGN.md §8 is explicit that
+  // approved carries no halo, so a reviewer's approval is never mistaken for the source's write.
   const halo = haloTexture();
   const haloGroup = new THREE.Group();
   scene.add(haloGroup);
@@ -240,13 +251,16 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
   let mode: SkyMode = 'hero';
   let world = new Float32Array(0);        // xyz per star
   let aSize = new Float32Array(0);
-  let aLit = new Float32Array(0);
+  let aTier = new Float32Array(0);        // continuous 0..2, the currently rendered tier
   let aPop = new Float32Array(0);
-  let litAt = new Float64Array(0);        // NaN unlit, -1 steady lit, else clock ms of ignition
+  let steadyTier = new Float32Array(0);   // 0/1/2, the tier once any animation finishes
+  let animFrom = new Float32Array(0);
+  let animTo = new Float32Array(0);
+  let animStart = new Float64Array(0);    // NaN: no animation in progress; else the clock ms it began
   let edgeStart = new Float64Array(0);    // NaN not lit, -1 steady, else clock ms the draw begins
   let edgePos = new Float32Array(0);
   let sprites: THREE.Sprite[] = [];
-  let litIds = new Set<string>();
+  let tiers = new Map<string, StarTier>();
   let animating = false;
 
   const t0 = performance.now();
@@ -297,7 +311,8 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     const n = stars.length;
     world = new Float32Array(n * 3);
     aSize = new Float32Array(n);
-    const nextLit = new Float32Array(n), nextPop = new Float32Array(n), nextLitAt = new Float64Array(n);
+    const nextTier = new Float32Array(n), nextPop = new Float32Array(n), nextSteady = new Float32Array(n);
+    const nextFrom = new Float32Array(n), nextTo = new Float32Array(n), nextStart = new Float64Array(n).fill(NaN);
     for (let i = 0; i < n; i++) {
       const s = stars[i];
       const k = (D - s.z) / D; // so the star projects exactly on its layout pixel at rest
@@ -305,18 +320,19 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       world[i * 3 + 1] = (height / 2 - s.y) * k;
       world[i * 3 + 2] = s.z;
       aSize[i] = (9 + s.seed * 1.4) * (1 + 0.22 * Math.max(-1, Math.min(1, s.z / 140)));
-      const lit = litIds.has(s.questId);
-      nextLit[i] = lit ? 1 : 0;
-      nextLitAt[i] = lit ? -1 : NaN;
+      const t = tiers.get(s.questId) ?? 0;
+      nextSteady[i] = t; nextTier[i] = t;
     }
     // Carry over in-flight ignitions across a relayout.
-    for (let i = 0; i < Math.min(n, litAt.length); i++) if (litAt[i] >= 0) { nextLitAt[i] = litAt[i]; nextLit[i] = aLit[i]; nextPop[i] = aPop[i]; }
-    aLit = nextLit; aPop = nextPop; litAt = nextLitAt;
+    for (let i = 0; i < Math.min(n, animStart.length); i++) {
+      if (!Number.isNaN(animStart[i])) { nextStart[i] = animStart[i]; nextFrom[i] = animFrom[i]; nextTo[i] = animTo[i]; nextTier[i] = aTier[i]; nextPop[i] = aPop[i]; }
+    }
+    steadyTier = nextSteady; aTier = nextTier; aPop = nextPop; animFrom = nextFrom; animTo = nextTo; animStart = nextStart;
 
     starGeo.setAttribute('position', new THREE.BufferAttribute(world, 3));
     starGeo.setAttribute('aSize', new THREE.BufferAttribute(aSize, 1));
     starGeo.setAttribute('aSeed', new THREE.BufferAttribute(Float32Array.from(stars.map((s) => s.seed)), 1));
-    starGeo.setAttribute('aLit', new THREE.BufferAttribute(aLit, 1));
+    starGeo.setAttribute('aTier', new THREE.BufferAttribute(aTier, 1));
     starGeo.setAttribute('aPop', new THREE.BufferAttribute(aPop, 1));
 
     const ep = new Float32Array(edges.length * 6);
@@ -326,7 +342,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     litEdgeGeo.setAttribute('position', new THREE.BufferAttribute(edgePos, 3));
     const nextEdgeStart = new Float64Array(edges.length);
     edges.forEach(([a, b], i) => {
-      const la = litAt[a], lb = litAt[b];
+      const la = edgeClock(a), lb = edgeClock(b);
       if (Number.isNaN(la) || Number.isNaN(lb)) nextEdgeStart[i] = NaN;
       else if (la < 0 && lb < 0) nextEdgeStart[i] = -1;
       else nextEdgeStart[i] = Math.max(la, lb) + EDGE_DELAY_MS;
@@ -349,25 +365,36 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     paint(elapsedMs());
   }
 
-  /** Writes lit/pop/halo/edge state for the clock time `now` (ms). */
+  /** NaN: this star is not (about to be) tier ≥1. -1: steady lit. ≥0: clock ms it began lighting.
+   *  Feeds the edge-draw scheduling, unchanged from v1's litAt-based version. */
+  function edgeClock(i: number): number {
+    if (Number.isNaN(animStart[i])) return steadyTier[i] >= 1 ? -1 : NaN;
+    return animTo[i] >= 1 ? animStart[i] : NaN;
+  }
+
+  /** Writes tier/pop/halo/edge state for the clock time `now` (ms). */
   function paint(now: number) {
     let busy = false;
     const n = stars.length;
     for (let i = 0; i < n; i++) {
-      const t0 = litAt[i];
       const sp = sprites[i];
-      if (Number.isNaN(t0)) { aLit[i] = 0; aPop[i] = 0; sp.visible = false; continue; }
-      let p = 1;
-      if (t0 >= 0) { p = clamp01((now - t0) / IGNITE_MS); if (p < 1) busy = true; else litAt[i] = -1; }
-      const e = easeOut(p);
-      aLit[i] = clamp01(p * 2.4);
-      aPop[i] = 1.15 * Math.sin(Math.PI * p) * (1 - p * 0.4);
-      const scale = HALO_PX * (0.35 + 0.65 * e) * (1 + 0.4 * Math.sin(Math.PI * p));
-      sp.visible = true;
-      sp.scale.set(scale, scale, 1);
-      sp.material.opacity = HALO_PEAK * e;
+      if (Number.isNaN(animStart[i])) {
+        aTier[i] = steadyTier[i];
+        aPop[i] = 0;
+      } else {
+        const p = clamp01((now - animStart[i]) / IGNITE_MS);
+        if (p >= 1) { steadyTier[i] = animTo[i]; animStart[i] = NaN; aTier[i] = animTo[i]; aPop[i] = 0; }
+        else { busy = true; const e = easeOut(p); aTier[i] = animFrom[i] + (animTo[i] - animFrom[i]) * e; aPop[i] = 1.15 * Math.sin(Math.PI * p) * (1 - p * 0.4); }
+      }
+      const landedAmt = clamp01(aTier[i] - 1);
+      sp.visible = landedAmt > 0.001;
+      if (sp.visible) {
+        const scale = HALO_PX * (0.35 + 0.65 * landedAmt) * (1 + 0.4 * Math.sin(Math.PI * Math.min(1, landedAmt)));
+        sp.scale.set(scale, scale, 1);
+        sp.material.opacity = HALO_PEAK * landedAmt;
+      }
     }
-    (starGeo.getAttribute('aLit') as THREE.BufferAttribute).needsUpdate = true;
+    (starGeo.getAttribute('aTier') as THREE.BufferAttribute).needsUpdate = true;
     (starGeo.getAttribute('aPop') as THREE.BufferAttribute).needsUpdate = true;
 
     for (let i = 0; i < edges.length; i++) {
@@ -384,11 +411,11 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     animating = busy;
   }
 
-  /** Steady lit halos breathe; ignitions in flight are owned by paint(). */
+  /** Steady landed (tier 2) halos breathe; ignitions in flight are owned by paint(). */
   function breathe(t: number) {
     const w = (t / HALO_BREATH_S) * Math.PI * 2;
     for (let i = 0; i < stars.length; i++) {
-      if (litAt[i] !== -1) continue;
+      if (!Number.isNaN(animStart[i]) || steadyTier[i] < 2) continue;
       const b = Math.sin(w + stars[i].seed * Math.PI * 2);
       const scale = HALO_PX * (1 + HALO_BREATH * b);
       sprites[i].scale.set(scale, scale, 1);
@@ -442,17 +469,28 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       dustMat.uniforms.uPx.value = renderer.getPixelRatio();
       rebuildBuffers();
     },
-    setLit(lit, animate) {
+    setLit(nextTiers, animate) {
+      // React can call setLit before the first setLayout (e.g. the ignition effect fires before
+      // the ResizeObserver's first measurement). There is no geometry to paint yet; just remember
+      // the tiers so the next rebuildBuffers() starts every star at the right one.
+      if (!starGeo.getAttribute('aTier')) { tiers = new Map(nextTiers); return; }
       const now = elapsedMs();
       for (let i = 0; i < stars.length; i++) {
         const id = stars[i].questId;
-        const was = litIds.has(id), is = lit.has(id);
-        if (is && !was) litAt[i] = animate ? now : -1;
-        else if (!is && was) litAt[i] = NaN;
+        const was = tiers.get(id) ?? 0;
+        const is = nextTiers.get(id) ?? 0;
+        if (is === was) continue;
+        if (animate) {
+          animFrom[i] = Number.isNaN(animStart[i]) ? steadyTier[i] : aTier[i];
+          animTo[i] = is;
+          animStart[i] = now;
+        } else {
+          steadyTier[i] = is; aTier[i] = is; animStart[i] = NaN;
+        }
       }
-      litIds = new Set(lit);
+      tiers = new Map(nextTiers);
       edges.forEach(([a, b], i) => {
-        const la = litAt[a], lb = litAt[b];
+        const la = edgeClock(a), lb = edgeClock(b);
         if (Number.isNaN(la) || Number.isNaN(lb)) edgeStart[i] = NaN;
         else if (la < 0 && lb < 0) { if (Number.isNaN(edgeStart[i])) edgeStart[i] = -1; }
         else edgeStart[i] = Math.max(la, lb) + EDGE_DELAY_MS;
@@ -470,7 +508,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
         v3.set(world[i * 3], world[i * 3 + 1], world[i * 3 + 2]).project(camera);
         const sx = ((v3.x + 1) / 2) * width, sy = ((1 - v3.y) / 2) * height;
         const d = (sx - x) ** 2 + (sy - y) ** 2;
-        const reach = litIds.has(stars[i].questId) ? bestD * 2 : bestD;
+        const reach = tiers.has(stars[i].questId) ? bestD * 2 : bestD;
         if (d < reach && d < (best === -1 ? Infinity : bestD)) { best = i; bestD = Math.min(bestD, d); }
       }
       return best;

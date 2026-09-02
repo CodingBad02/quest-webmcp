@@ -1,45 +1,86 @@
-import { useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { activeQuest, closeQuest, updateDraft, useAppState } from '../state/store';
 import { controller } from '../webmcp/tools';
 import { StateChip } from './StateChip';
-import type { ContributionPayload } from '../types';
-
-async function resizeImage(file: File): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
-    const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL('image/jpeg', 0.8);
-  } finally { URL.revokeObjectURL(url); }
-}
+import type { ContributionPayload, Quest } from '../types';
 
 const PRESETS: [string, string][] = [['Weekdays 9 to 6', 'Mo-Fr 09:00-18:00'], ['Every day 9 to 9', 'Mo-Su 09:00-21:00'], ['Always open', '24/7'], ['Closed Sundays', 'Mo-Sa 09:00-18:00; Su off']];
+
+function formatCountdown(expiresAt: string, now: number): string {
+  const ms = Date.parse(expiresAt) - now;
+  if (ms <= 0) return '0:00';
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** DESIGN.md §7: Survey owns the form now. Quest just hands the volunteer a link and watches
+ *  the handoff clock. `Reopen` mints a fresh one when it expires before the visit happens. */
+function HandoffCard({ q }: { q: Quest }) {
+  const handoff = useAppState((s) => (s.handoff?.questId === q.id ? s.handoff : null));
+  const contribution = useAppState((s) => s.contributions.find((c) => c.questId === q.id));
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const expired = !handoff || now === null || Date.parse(handoff.expiresAt) <= now;
+  const inFlight = Boolean(contribution && contribution.status !== 'open');
+
+  return (
+    <div className="handoff-card">
+      {contribution && contribution.status !== 'open' && <StateChip state={contribution.status} pulse />}
+      <p className="help">Your agent can take you there. The tools for this quest live on Survey.</p>
+      {inFlight ? null : !expired && handoff && now !== null ? (
+        <>
+          <a className="btn primary" href={handoff.url}>Continue on Survey</a>
+          <p className="handoff-countdown">Handoff expires <span className="mono">{formatCountdown(handoff.expiresAt, now)}</span></p>
+        </>
+      ) : (
+        <button className="btn" type="button" onClick={() => { void controller.run('open', { id: q.id }, { viaUi: true }); }}>Reopen</button>
+      )}
+    </div>
+  );
+}
 
 export function Workspace() {
   const q = useAppState(() => activeQuest());
   const draft = useAppState((s) => s.draft);
   const ws = useAppState((s) => s.workspace);
   const errors = useAppState((s) => s.checkErrors);
-  const fileRef = useRef<HTMLInputElement>(null);
-  if (!q || !draft) return null;
+  if (!q) return null;
 
+  const head = (
+    <div className="section-head">
+      <h1>{q.placeName}</h1>
+      <p className="muted">
+        <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : 'Step-free entry'}</span>
+        {q.address && <span>{q.address}</span>}
+        {q.osmLink && <a href={q.osmLink} target="_blank" rel="noreferrer">View on OpenStreetMap</a>}
+      </p>
+    </div>
+  );
+
+  if (q.type === 'access-photo') {
+    return (
+      <div className="workspace" data-state={ws}>
+        <button className="back" onClick={closeQuest}>← All quests</button>
+        {head}
+        <HandoffCard q={q} />
+      </div>
+    );
+  }
+
+  if (!draft || draft.kind !== 'verify-hours') return null;
   const set = (p: ContributionPayload) => updateDraft(p);
   const locked = ws === 'submitted' || ws === 'approved';
 
   return (
     <div className="workspace" data-state={ws}>
       <button className="back" onClick={closeQuest}>← All quests</button>
-      <div className="section-head">
-        <h1>{q.placeName}</h1>
-        <p className="muted">
-          <span className={`kind kind-${q.type}`}>{q.type === 'verify-hours' ? 'Confirm hours' : 'Step-free entry'}</span>
-          {q.address && <span>{q.address}</span>}
-          {q.osmLink && <a href={q.osmLink} target="_blank" rel="noreferrer">View on OpenStreetMap</a>}
-        </p>
-      </div>
+      {head}
 
       <ol className="steps" aria-label="Progress">
         <Step n={1} label="Do the work" state={ws === 'in-workspace' ? 'on' : 'done'} />
@@ -49,34 +90,14 @@ export function Workspace() {
       </ol>
 
       <fieldset className="form" disabled={locked}>
-        {draft.kind === 'verify-hours' && (
-          <>
-            <p className="help">Call the place, check its website, or visit. Then enter the hours in OpenStreetMap form. Use HH:MM. Example: <code>Mo-Fr 08:00-17:00</code>. A comma splits a break. A semicolon splits day groups.</p>
-            <div className="presets">{PRESETS.map(([l, v]) => <button type="button" key={v} className="chip" onClick={() => set({ ...draft, openingHours: v })}>{l}</button>)}</div>
-            <div className="field"><label htmlFor="oh">Opening hours</label><input id="oh" value={draft.openingHours} placeholder="Mo-Sa 09:00-21:00" onChange={(e) => set({ ...draft, openingHours: e.target.value })} aria-describedby="err-0" /></div>
-            <div className="field"><label htmlFor="vb">How did you check?</label>
-              <select id="vb" value={draft.verifiedBy} onChange={(e) => set({ ...draft, verifiedBy: e.target.value as typeof draft.verifiedBy })}>
-                <option value="">Choose</option><option value="phone">I called them</option><option value="website">Their website</option><option value="visit">I went there</option>
-              </select></div>
-            <div className="field"><label htmlFor="note">What did they say?</label><textarea id="note" rows={2} value={draft.note} placeholder="Spoke to the manager at 4 pm. Closed on the second Saturday." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
-          </>
-        )}
-        {draft.kind === 'access-photo' && (
-          <>
-            <p className="help">Photograph the main entrance from the street. No faces or number plates. Step-free means no steps, no high kerb, and a door a wheelchair fits through. Not sure? Pick “limited” and say why.</p>
-            <div className="field">
-              <label htmlFor="photo">Entrance photo</label>
-              <input id="photo" ref={fileRef} type="file" accept="image/*" capture="environment" onChange={async (e) => { const f = e.target.files?.[0]; if (f) set({ ...draft, imageDataUrl: await resizeImage(f) }); }} />
-              {draft.imageDataUrl && <img className="preview" src={draft.imageDataUrl} alt="Entrance preview" />}
-            </div>
-            <fieldset className="field radios"><legend>Can a wheelchair user get in?</legend>
-              {(['yes', 'limited', 'no'] as const).map((v) => (
-                <label key={v} className={`chip ${draft.wheelchair === v ? 'on' : ''}`}><input type="radio" name="wc" checked={draft.wheelchair === v} onChange={() => set({ ...draft, wheelchair: v })} /> {v}</label>
-              ))}
-            </fieldset>
-            <div className="field"><label htmlFor="note2">Notes {draft.wheelchair === 'limited' && '(required for limited)'}</label><textarea id="note2" rows={2} value={draft.note} placeholder="One 8 cm step at the door. Staff bring a ramp if asked." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
-          </>
-        )}
+        <p className="help">Call the place, check its website, or visit. Then enter the hours in OpenStreetMap form. Use HH:MM. Example: <code>Mo-Fr 08:00-17:00</code>. A comma splits a break. A semicolon splits day groups.</p>
+        <div className="presets">{PRESETS.map(([l, v]) => <button type="button" key={v} className="chip" onClick={() => set({ ...draft, openingHours: v })}>{l}</button>)}</div>
+        <div className="field"><label htmlFor="oh">Opening hours</label><input id="oh" value={draft.openingHours} placeholder="Mo-Sa 09:00-21:00" onChange={(e) => set({ ...draft, openingHours: e.target.value })} aria-describedby="err-0" /></div>
+        <div className="field"><label htmlFor="vb">How did you check?</label>
+          <select id="vb" value={draft.verifiedBy} onChange={(e) => set({ ...draft, verifiedBy: e.target.value as typeof draft.verifiedBy })}>
+            <option value="">Choose</option><option value="phone">I called them</option><option value="website">Their website</option><option value="visit">I went there</option>
+          </select></div>
+        <div className="field"><label htmlFor="note">What did they say?</label><textarea id="note" rows={2} value={draft.note} placeholder="Spoke to the manager at 4 pm. Closed on the second Saturday." onChange={(e) => set({ ...draft, note: e.target.value })} /></div>
       </fieldset>
 
       {errors.length > 0 && (

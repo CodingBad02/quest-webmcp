@@ -92,7 +92,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sky-svg .edge { stroke: rgba(238,241,248,.12); stroke-width: 1; }
 .sky-svg .edge.on { stroke: rgba(255,209,102,.55); stroke-width: 1; }
 .sky-svg .star .core { fill: rgba(219,227,248,.62); }
-.sky-svg .star.lit .core { fill: var(--star-lit); }
+.sky-svg .star.landed .core { fill: var(--star-lit); }
+.sky-svg .star.approved .core.ring { fill: none; stroke: var(--star-lit); stroke-width: 2; }
 .sky-svg .star .halo { fill: var(--star-lit); opacity: .55; }
 .star-hit { position: absolute; z-index: 1; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; transform: translate(-50%, -50%); cursor: default; }
 .star-hit:focus-visible { outline-color: var(--star-lit); outline-offset: -12px; }
@@ -173,6 +174,8 @@ textarea { resize: vertical; }
 .questlist > .small { margin-top: 10px; }
 .mine ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .mine-item { font-size: 14px; display: flex; gap: 10px; align-items: baseline; }
+/* DESIGN.md §7: a return receipt from a partner site gets a small muted mono tag. */
+.via-tag { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 
 /* ---------- State chip (DESIGN.md §4): one glyph + label for the ten envelope states.
    Not part of qt.css — this is Quest's own component, built from the same --qt-* tokens
@@ -213,6 +216,11 @@ textarea { resize: vertical; }
 .form { border: 0; padding: 0; margin: 0; }
 .form:disabled { opacity: .72; }
 .help { color: var(--muted); font-size: 14px; line-height: 1.55; margin-bottom: 14px; max-width: 70ch; }
+/* DESIGN.md §7: Survey owns the access-photo form. Quest hands the volunteer a link and a clock. */
+.handoff-card { display: grid; gap: 14px; align-items: start; max-width: 60ch; }
+.handoff-card .btn { justify-self: start; }
+.handoff-countdown { margin: 0; font-size: 14px; color: var(--muted); }
+.handoff-countdown .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--text); font-weight: 500; }
 .preview { display: block; max-width: 320px; max-height: 240px; border-radius: var(--r-s); margin-top: 8px; border: 1px solid var(--border); }
 .errors { margin: 0 0 14px; padding: 12px 16px 12px 32px; border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); border-radius: var(--r-s); color: var(--danger); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); font-size: 14px; line-height: 1.5; }
 .errors li + li { margin-top: 4px; }

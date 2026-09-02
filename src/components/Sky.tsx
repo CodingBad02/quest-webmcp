@@ -1,13 +1,14 @@
 /**
- * The sky. Real places rendered as stars, one per quest, lit on approval.
- * WebGL when the browser has it and the person has not asked for reduced motion; otherwise the
- * static SVG constellation in the same container. Both set data-lit on the root.
+ * The sky. Real places rendered as stars, one per quest: an outlined ring on approval, filled with
+ * a halo once landed (DESIGN.md §8). WebGL when the browser has it and the person has not asked for
+ * reduced motion; otherwise the static SVG constellation in the same container. Both set
+ * data-approved / data-landed counts on the root.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '../state/store';
 import { ConstellationStatic } from './Constellation';
 import { StateChip } from './StateChip';
-import { buildSkyModel, litMap, placeStars, type SkyMode } from './skyLayout';
+import { buildSkyModel, placeStars, starTiers, type SkyMode, type StarTier } from './skyLayout';
 import type { SkyHandle } from './skyScene';
 
 type Path = 'webgl' | 'svg';
@@ -40,9 +41,14 @@ export function Sky({ size }: { size: SkyMode }) {
   const quests = useAppState((s) => s.quests);
   const contributions = useAppState((s) => s.contributions);
   const model = useMemo(() => buildSkyModel(campaigns, quests), [campaigns, quests]);
-  const lit = useMemo(() => litMap(contributions), [contributions]);
-  const litIds = useMemo(() => new Set(model.stars.filter((s) => lit.has(s.questId)).map((s) => s.questId)), [model, lit]);
-  const litCount = litIds.size;
+  const tiers = useMemo(() => starTiers(contributions), [contributions]);
+  const tierById = useMemo(() => {
+    const m = new Map<string, StarTier>();
+    for (const s of model.stars) { const t = tiers.get(s.questId); if (t) m.set(s.questId, t.tier); }
+    return m;
+  }, [model, tiers]);
+  const approvedCount = useMemo(() => [...tierById.values()].filter((t) => t === 1).length, [tierById]);
+  const landedCount = useMemo(() => [...tierById.values()].filter((t) => t === 2).length, [tierById]);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,7 +57,7 @@ export function Sky({ size }: { size: SkyMode }) {
   const [ready, setReady] = useState(false);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<Hover | null>(null);
-  const firstLit = useRef(true);
+  const firstPaint = useRef(true);
 
   const layout = useMemo(() => (dims.w && dims.h ? placeStars(model, dims.w, dims.h, size) : null), [model, dims, size]);
 
@@ -96,16 +102,16 @@ export function Sky({ size }: { size: SkyMode }) {
     const h = handleRef.current;
     if (!ready || !h || !layout) return;
     h.setLayout(layout.stars, layout.edges, dims.w, dims.h, size);
-    h.setLit(litIds, false);
+    h.setLit(tierById, false);
   }, [ready, layout, dims, size]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ignition: lit set changes while mounted animate; the first read does not.
+  // Ignition: tiers changing while mounted animate; the first read does not.
   useEffect(() => {
     const h = handleRef.current;
     if (!ready || !h) return;
-    h.setLit(litIds, !firstLit.current);
-    firstLit.current = false;
-  }, [ready, litIds]);
+    h.setLit(tierById, !firstPaint.current);
+    firstPaint.current = false;
+  }, [ready, tierById]);
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const h = handleRef.current;
@@ -119,15 +125,15 @@ export function Sky({ size }: { size: SkyMode }) {
   const onLeave = () => { handleRef.current?.pointer(null, null); setHover(null); };
 
   const hoverStar = hover && layout ? layout.stars[hover.index] : null;
-  const hoverLit = hoverStar ? lit.get(hoverStar.questId) : undefined;
+  const hoverTier = hoverStar ? tiers.get(hoverStar.questId) : undefined;
   const tipX = hover && dims.w ? Math.min(Math.max(hover.x, 110), dims.w - 110) : 0;
 
   return (
-    <div ref={rootRef} className={`sky-root sky-${size} sky-path-${path}`} data-lit={litCount} onPointerMove={path === 'webgl' ? onMove : undefined} onPointerLeave={path === 'webgl' ? onLeave : undefined}>
+    <div ref={rootRef} className={`sky-root sky-${size} sky-path-${path}`} data-approved={approvedCount} data-landed={landedCount} onPointerMove={path === 'webgl' ? onMove : undefined} onPointerLeave={path === 'webgl' ? onLeave : undefined}>
       {path === 'webgl' ? (
         <canvas ref={canvasRef} className="sky-canvas" aria-hidden="true" />
       ) : layout ? (
-        <ConstellationStatic layout={layout} lit={lit} w={dims.w} h={dims.h} onHover={(index, x, y) => setHover(index === -1 ? null : { index, x, y })} />
+        <ConstellationStatic layout={layout} tiers={tiers} w={dims.w} h={dims.h} onHover={(index, x, y) => setHover(index === -1 ? null : { index, x, y })} />
       ) : null}
 
       {size === 'hero' && (
@@ -146,7 +152,7 @@ export function Sky({ size }: { size: SkyMode }) {
           </ul>
           <ol className="sky-legend" aria-label="Campaigns" style={{ gridTemplateColumns: `repeat(${model.panels.length}, minmax(0, 1fr))` }}>
             {model.panels.map((p) => {
-              const litHere = p.starIndices.filter((i) => litIds.has(model.stars[i].questId)).length;
+              const litHere = p.starIndices.filter((i) => tierById.has(model.stars[i].questId)).length;
               return (
                 <li key={p.campaignId}>
                   <span className="sky-legend-name">{p.name}</span>
@@ -161,15 +167,15 @@ export function Sky({ size }: { size: SkyMode }) {
       {hoverStar && (
         <div className="sky-tip" role="tooltip" style={{ left: tipX, top: hover!.y }}>
           <strong>{hoverStar.placeName}</strong>
-          {hoverLit ? <span>Lit by {hoverLit.volunteerName}. Reviewed by {hoverLit.reviewerName}.</span> : <span>{hoverStar.gap}</span>}
+          {hoverTier ? <span>{hoverTier.tier === 2 ? 'Landed' : 'Approved'}. Reviewed by {hoverTier.contribution.reviewerName}.</span> : <span>{hoverStar.gap}</span>}
         </div>
       )}
 
       {path === 'webgl' && (
         <ul className="sr-only" aria-label="Stars">
           {model.stars.map((s) => {
-            const c = lit.get(s.questId);
-            return <li key={s.questId}>{s.placeName}, {s.gap}. {c ? `Lit by ${c.volunteerName}. Reviewed by ${c.reviewerName}.` : 'Not lit.'}</li>;
+            const t = tiers.get(s.questId);
+            return <li key={s.questId}>{s.placeName}, {s.gap}. {t ? `${t.tier === 2 ? 'Landed' : 'Approved'}. Reviewed by ${t.contribution.reviewerName}.` : 'Not lit.'}</li>;
           })}
         </ul>
       )}

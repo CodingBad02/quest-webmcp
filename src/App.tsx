@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getState, reloadShared, setState, subscribe, toast, useAppState } from './state/store';
+import { getState, loadContributionsFromStore, setState, subscribe, toast, useAppState } from './state/store';
 import { buildCampaigns, loadQuests } from './data/overpass';
 import { onQuestEvent } from './channel/broadcast';
 import { controller } from './webmcp/tools';
@@ -21,15 +21,20 @@ export default function App() {
       setState({ quests, campaigns: buildCampaigns(quests), questSource: source });
       controller.refresh();
     });
+    loadContributionsFromStore();
     const unsubStore = subscribe(() => controller.refresh());
     controller.refresh();
-    const unsubEvents = onQuestEvent((e) => {
-      reloadShared();
+    const unsubEvents = onQuestEvent(async (e) => {
+      await loadContributionsFromStore();
       const s = getState();
       if (e.type === 'contribution:approved' && s.role === 'volunteer') {
         const c = s.contributions.find((x) => x.id === e.contributionId);
         toast(`${e.reviewerName} approved your work on ${c?.questTitle.replace(/^.*?: /, '') ?? 'a quest'}. A star lit up.`);
         if (s.activeQuestId === e.questId) setState({ workspace: 'approved' });
+      }
+      if (e.type === 'contribution:stale' && s.role === 'volunteer') {
+        toast(`Marked stale: ${e.comment}`);
+        if (s.activeQuestId === e.questId) setState({ workspace: 'in-workspace' });
       }
       if (e.type === 'contribution:rejected' && s.role === 'volunteer') {
         toast(`Sent back: ${e.comment}`);
@@ -37,9 +42,10 @@ export default function App() {
       }
       if (e.type === 'contribution:submitted' && s.role === 'reviewer') toast('New contribution to review.');
     });
-    const onStorage = (ev: StorageEvent) => { if (ev.key === 'quest.state.v1') reloadShared(); };
-    window.addEventListener('storage', onStorage);
-    return () => { unsubStore(); unsubEvents(); window.removeEventListener('storage', onStorage); };
+    // The store is the source of truth; poll while the tab is visible so an approval
+    // from another session (no BroadcastChannel across origins or profiles) still lands.
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') loadContributionsFromStore(); }, 4000);
+    return () => { unsubStore(); unsubEvents(); clearInterval(poll); };
   }, []);
 
   const base = import.meta.env.BASE_URL;

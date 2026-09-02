@@ -18,6 +18,9 @@ export interface Quest {
   lat?: number;
   lon?: number;
   osmLink?: string;
+  /** OSM element, e.g. "node/123". Undefined for fallback-JSON quests, which carry no version to conflict-check. */
+  osmRef?: string;
+  osmVersion?: number;
   sourceTags: Record<string, string>;
   estimatedMinutes: number;
   requiredSkills: string[];
@@ -41,7 +44,8 @@ export interface Contribution {
   volunteerName: string;
   payload: ContributionPayload;
   status: ContributionStatus;
-  checkErrors: string[];
+  /** The origin the evidence was entered on. Quest's own origin when unset or equal to it. */
+  via?: string;
   submittedAt?: string;
   reviewedAt?: string;
   reviewerName?: string;
@@ -64,6 +68,12 @@ export interface Star {
 
 export type WorkspaceState = 'browsing' | 'in-workspace' | 'checked' | 'submitted' | 'approved' | 'rejected';
 
+export interface Handoff {
+  url: string;
+  expiresAt: string;
+  questId: string;
+}
+
 export interface AppState {
   profile: Profile;
   quests: Quest[];
@@ -76,9 +86,12 @@ export interface AppState {
   questSource: 'live' | 'cached' | 'fallback' | 'loading';
   checkErrors: string[];
   toast: string | null;
+  /** The open cross-site continuation for the active access-photo quest, if any. */
+  handoff: Handoff | null;
 }
 
 export type QuestEvent =
   | { type: 'contribution:submitted'; contributionId: string; questId: string }
   | { type: 'contribution:approved'; contributionId: string; questId: string; reviewerName: string }
-  | { type: 'contribution:rejected'; contributionId: string; questId: string; comment: string };
+  | { type: 'contribution:rejected'; contributionId: string; questId: string; comment: string }
+  | { type: 'contribution:stale'; contributionId: string; questId: string; comment: string };

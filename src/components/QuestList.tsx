@@ -1,5 +1,5 @@
-import { openQuest, useAppState } from '../state/store';
-import { findQuestsImpl } from '../webmcp/tools';
+import { useAppState } from '../state/store';
+import { controller, findQuestsImpl } from '../webmcp/tools';
 import { StateChip } from './StateChip';
 import type { JSX } from 'react';
 import type { Quest, QuestType } from '../types';
@@ -15,7 +15,7 @@ const KIND: Record<QuestType, string> = { 'verify-hours': 'Confirm hours', 'acce
 function Card({ q }: { q: Quest }) {
   return (
     <li>
-      <button className="card" onClick={() => openQuest(q.id)}>
+      <button className="card" onClick={() => { void controller.run('open', { id: q.id }, { viaUi: true }); }}>
         <span className={`card-glyph kind-${q.type}`} aria-hidden="true">{ICON[q.type]}</span>
         <span className={`kind kind-${q.type}`}>{KIND[q.type]}</span>
         <strong className="card-title">{q.placeName}</strong>
@@ -55,6 +55,7 @@ export function QuestList() {
             {mine.map((c) => (
               <li key={c.id} className="mine-item">
                 <StateChip state={c.status} pulse /> {c.questTitle}
+                {c.via && c.via !== location.origin && <span className="via-tag">via Survey</span>}
                 {c.reviewComment && <span className="muted"> · {c.reviewComment}</span>}
               </li>
             ))}

@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import type { AppState, Contribution, ContributionPayload, Quest, QuestType, WorkspaceState } from '../types';
+import type { StoredContribution } from '../../worker/src/client.ts';
+import { store } from './storeClient';
+import type { AppState, Contribution, ContributionPayload, Quest, WorkspaceState } from '../types';
 
 const KEY = 'quest.state.v1';
-const SHARED_KEYS: (keyof AppState)[] = ['contributions'];
 
 const defaultState = (): AppState => ({
   profile: { name: '', minutesAvailable: 20, skills: [], languages: ['English'], accessibilityNeeds: [] },
@@ -16,15 +17,17 @@ const defaultState = (): AppState => ({
   questSource: 'loading',
   checkErrors: [],
   toast: null,
+  handoff: null,
 });
 
+/** Only the profile persists in this browser. Contributions come from the store (SPEC.md). */
 function load(): AppState {
   const base = defaultState();
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return base;
     const saved = JSON.parse(raw) as Partial<AppState>;
-    return { ...base, profile: saved.profile ?? base.profile, contributions: saved.contributions ?? [] };
+    return { ...base, profile: saved.profile ?? base.profile };
   } catch {
     return base;
   }
@@ -35,7 +38,7 @@ const listeners = new Set<() => void>();
 
 function persist() {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ profile: state.profile, contributions: state.contributions }));
+    localStorage.setItem(KEY, JSON.stringify({ profile: state.profile }));
   } catch { /* quota: ignore, memory state still works */ }
 }
 
@@ -44,7 +47,7 @@ export function getState() { return state; }
 export function setState(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)) {
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...p };
-  if (Object.keys(p).some((k) => SHARED_KEYS.includes(k as keyof AppState) || k === 'profile')) persist();
+  if ('profile' in p) persist();
   listeners.forEach((l) => l());
 }
 
@@ -54,27 +57,62 @@ export function useAppState<T>(sel: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => sel(state), () => sel(state));
 }
 
-/** Re-read shared data written by another tab. */
-export function reloadShared() {
-  const fresh = load();
-  setState({ contributions: fresh.contributions });
+// ---------- the shared store (SPEC.md's Coordinator) ----------
+
+function toContribution(sc: StoredContribution): Contribution {
+  return {
+    id: sc.id,
+    questId: sc.quest.id,
+    questTitle: sc.quest.title,
+    volunteerName: sc.volunteerName,
+    payload: sc.payload as ContributionPayload,
+    status: sc.state,
+    via: sc.via,
+    submittedAt: sc.submittedAt,
+    reviewedAt: sc.reviewedAt,
+    reviewerName: sc.reviewerName,
+    reviewComment: sc.reviewComment,
+  };
 }
 
-export function emptyDraft(type: QuestType): ContributionPayload {
-  if (type === 'verify-hours') return { kind: 'verify-hours', openingHours: '', verifiedBy: '', note: '' };
-  return { kind: 'access-photo', imageDataUrl: '', wheelchair: '', note: '' };
+export function mergeContribution(sc: StoredContribution) {
+  const c = toContribution(sc);
+  setState({ contributions: [...state.contributions.filter((x) => x.id !== c.id), c] });
 }
 
+let storeWarned = false;
+export async function loadContributionsFromStore() {
+  try {
+    const list = await store.list();
+    setState({ contributions: list.map(toContribution) });
+  } catch {
+    if (!storeWarned) {
+      storeWarned = true;
+      toast('Store unreachable. Quests still load; submitting needs the store.');
+    }
+  }
+}
+
+export function emptyDraft(): ContributionPayload {
+  return { kind: 'verify-hours', openingHours: '', verifiedBy: '', note: '' };
+}
+
+/** The local part of opening a quest: workspace navigation. The `open` tool operation
+ *  (webmcp/tools.ts) also talks to the store for access-photo quests; this only sets local UI state. */
 export function openQuest(questId: string) {
   const q = state.quests.find((x) => x.id === questId);
   if (!q) return false;
-  const existing = state.contributions.find((c) => c.questId === questId && c.status !== 'rejected');
-  const ws: WorkspaceState = existing ? (existing.status === 'submitted' ? 'submitted' : existing.status === 'approved' ? 'approved' : 'in-workspace') : 'in-workspace';
-  setState({ activeQuestId: questId, draft: existing?.payload ?? emptyDraft(q.type), workspace: ws, checkErrors: [] });
+  if (q.type === 'access-photo') {
+    setState({ activeQuestId: questId, draft: null, workspace: 'in-workspace', checkErrors: [], handoff: null });
+    return true;
+  }
+  const existing = state.contributions.find((c) => c.questId === questId && c.status !== 'rejected' && c.status !== 'stale');
+  const ws: WorkspaceState = existing ? (existing.status === 'submitted' ? 'submitted' : existing.status === 'approved' || existing.status === 'landed' ? 'approved' : 'in-workspace') : 'in-workspace';
+  setState({ activeQuestId: questId, draft: existing?.payload ?? emptyDraft(), workspace: ws, checkErrors: [], handoff: null });
   return true;
 }
 
-export function closeQuest() { setState({ activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [] }); }
+export function closeQuest() { setState({ activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], handoff: null }); }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 export function toast(msg: string) {
@@ -89,11 +127,6 @@ export function updateDraft(payload: ContributionPayload) {
 
 export function activeQuest(): Quest | null {
   return state.quests.find((q) => q.id === state.activeQuestId) ?? null;
-}
-
-export function upsertContribution(c: Contribution) {
-  const others = state.contributions.filter((x) => x.id !== c.id);
-  setState({ contributions: [...others, c] });
 }
 
 export function nextId(prefix: string) {

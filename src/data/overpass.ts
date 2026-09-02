@@ -7,12 +7,13 @@ const CACHE_KEY = 'quest.overpass.v1';
 const TTL = 24 * 3600 * 1000;
 const AMENITIES = '^(pharmacy|clinic|library|community_centre|cafe|toilets|bank|post_office)$';
 
-interface Element { type: 'node' | 'way' | 'relation'; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags: Record<string, string> }
+interface Element { type: 'node' | 'way' | 'relation'; id: number; version?: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags: Record<string, string> }
 interface Response { elements: Element[] }
 
+// `meta` adds each element's version, the conflict marker captured when a quest is opened.
 const query = (lat: number, lon: number) => `[out:json][timeout:25];
 nwr(around:1000,${lat},${lon})["amenity"~"${AMENITIES}"]["name"];
-out center tags;`;
+out meta center;`;
 
 const HOURS_MIN: Record<string, number> = { cafe: 5, pharmacy: 5, bank: 5, post_office: 5, library: 5, clinic: 5, community_centre: 8, toilets: 10 };
 
@@ -38,6 +39,8 @@ function toQuest(el: Element, type: QuestType): Quest {
     address: address(el.tags),
     lat: p.lat, lon: p.lon,
     osmLink: `https://www.openstreetmap.org/${el.type}/${el.id}`,
+    osmRef: `${el.type}/${el.id}`,
+    osmVersion: el.version,
     sourceTags: el.tags,
     estimatedMinutes: isHours ? (HOURS_MIN[amenity] ?? 5) : 10,
     requiredSkills: isHours ? ['phone'] : ['photo', 'visit'],

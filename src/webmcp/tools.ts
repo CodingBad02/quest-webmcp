@@ -3,10 +3,12 @@
  * a shared function the UI also calls, via controller.run(). Agent does logistics. Human does the work.
  */
 import { createDialogConfirm, createQuestTools, result, safeText } from '@gatherlight/quest-tools';
-import { activeQuest, getState, nextId, openQuest, setState, toast, upsertContribution } from '../state/store';
+import type { QuestRef } from '../../worker/src/client.ts';
+import { activeQuest, getState, mergeContribution, nextId, openQuest, setState, toast } from '../state/store';
+import { store, SURVEY_URL } from '../state/storeClient';
 import { broadcast } from '../channel/broadcast';
 import { validate } from '../validators';
-import type { Contribution, ContributionPayload, Quest } from '../types';
+import type { ContributionPayload, Quest } from '../types';
 
 // ---------- find ----------
 
@@ -21,8 +23,11 @@ export function findQuestsImpl(args: FindArgs): Quest[] {
   const s = getState();
   const minutes = args.minutesAvailable ?? s.profile.minutesAvailable;
   const skills = new Set((args.skills ?? s.profile.skills).map((x) => SKILL_ALIASES[x.toLowerCase()] ?? x.toLowerCase()));
-  const done = new Set(s.contributions.filter((c) => c.status !== 'rejected').map((c) => c.questId));
-  let pool = s.quests.filter((q) => !done.has(q.id) && q.estimatedMinutes <= minutes);
+  const done = new Set(s.contributions.filter((c) => c.status !== 'rejected' && c.status !== 'stale').map((c) => c.questId));
+  // Only quests placed in a campaign panel (buildCampaigns' bounded slice) have a star in the sky.
+  // A quest the agent can find and open must also be one the volunteer can watch light up.
+  const inSky = new Set(s.campaigns.flatMap((c) => c.questIds));
+  let pool = s.quests.filter((q) => inSky.has(q.id) && !done.has(q.id) && q.estimatedMinutes <= minutes);
   if (args.type) pool = pool.filter((q) => q.type === args.type);
   if (args.remoteOnly) pool = pool.filter((q) => q.remote);
   const score = (q: Quest) => {
@@ -43,18 +48,17 @@ const fmtQuest = (q: Quest, i: number) =>
 // ---------- check: the confirmation summary the volunteer filled ----------
 
 const CHECKED_BY_LABEL: Record<string, string> = { phone: 'Phone call', visit: 'In-person visit', website: 'Website', '': 'Not stated' };
-const WHEELCHAIR_LABEL: Record<string, string> = { yes: 'Yes', limited: 'Limited', no: 'No', '': 'Not stated' };
 
-function summaryFields(payload: ContributionPayload): [string, string][] {
-  if (payload.kind === 'verify-hours') {
-    return [
-      ['Opening hours', payload.openingHours || 'Not stated'],
-      ['Checked by', CHECKED_BY_LABEL[payload.verifiedBy]],
-    ];
-  }
-  const fields: [string, string][] = [['Wheelchair access', WHEELCHAIR_LABEL[payload.wheelchair]]];
-  if (payload.note.trim()) fields.push(['Note', safeText(payload.note)]);
-  return fields;
+/** Only verify-hours is checked here: access-photo is Survey's form now (DESIGN.md §7). */
+function summaryFields(payload: Extract<ContributionPayload, { kind: 'verify-hours' }>): [string, string][] {
+  return [
+    ['Opening hours', payload.openingHours || 'Not stated'],
+    ['Checked by', CHECKED_BY_LABEL[payload.verifiedBy]],
+  ];
+}
+
+function toQuestRef(q: Quest): QuestRef {
+  return { id: q.id, type: q.type, title: q.title, placeName: q.placeName, osmRef: q.osmRef, osmVersion: q.osmVersion, lat: q.lat, lon: q.lon, license: 'Open Database License (ODbL)' };
 }
 
 // ---------- the controller ----------
@@ -68,20 +72,43 @@ export const controller = createQuestTools({
       return result('available', `Found ${list.length} quests:\n${list.map(fmtQuest).join('\n')}`);
     },
 
-    open(input) {
+    async open(input) {
       const id = String((input as { id?: string }).id ?? '');
+      const q = getState().quests.find((x) => x.id === id);
+      if (!q) return result('invalid', `No quest with id "${id}". Call find-quests to get current ids.`);
+
+      if (q.type === 'access-photo') {
+        openQuest(id);
+        const existing = getState().contributions.find((c) => c.questId === id && c.status !== 'rejected' && c.status !== 'stale');
+        if (existing && existing.status !== 'open') {
+          return result('open', `"${safeText(q.title)}" is already ${existing.status}. ${existing.status === 'submitted' ? 'Waiting for a reviewer.' : 'A star lit for it already.'}`, { questId: id, contributionId: existing.id });
+        }
+        const contributionId = existing?.id ?? nextId('c');
+        try {
+          if (!existing) {
+            const volunteerName = getState().profile.name || 'A volunteer';
+            const sc = await store.upsert(contributionId, { quest: toQuestRef(q), volunteerName, state: 'open' });
+            mergeContribution(sc);
+          }
+          const { handoff, expiresAt } = await store.issueHandoff(contributionId, new URL(SURVEY_URL).origin, 300);
+          setState({ handoff: { url: `${SURVEY_URL}?handoff=${handoff}`, expiresAt, questId: id } });
+          const url = `${SURVEY_URL}?handoff=${handoff}`;
+          return result('open', `Opened "${safeText(q.title)}". This quest continues on Survey. Navigate to ${url}; the volunteer fills the form there and you call check-contribution on that page.`, { questId: id, contributionId, next: { url, handoff } });
+        } catch (e) {
+          return result('invalid', `Not opened. ${(e as Error).message}`);
+        }
+      }
+
       if (!openQuest(id)) return result('invalid', `No quest with id "${id}". Call find-quests to get current ids.`);
-      const q = activeQuest()!;
-      const how = q.type === 'verify-hours'
-        ? 'The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00".'
-        : 'The volunteer photographs the entrance and marks wheelchair access yes, limited, or no.';
-      return result('open', `Opened "${safeText(q.title)}". ${how} The volunteer does this part. When the form is filled, call check-contribution.`, { questId: id });
+      const opened = activeQuest()!;
+      return result('open', `Opened "${safeText(opened.title)}". The volunteer calls or visits the place and enters its opening hours in OSM syntax, e.g. "Mo-Sa 09:00-21:00". The volunteer does this part. When the form is filled, call check-contribution.`, { questId: id });
     },
 
     check() {
       const s = getState();
       const q = activeQuest();
-      if (!q || !s.draft) return result('invalid', 'No quest is open. Open a quest first.');
+      if (!q || q.type === 'access-photo') return result('invalid', 'This quest continues on Survey.');
+      if (!s.draft || s.draft.kind !== 'verify-hours') return result('invalid', 'No quest is open. Open a quest first.');
       const errors = validate(s.draft);
       setState({ checkErrors: errors, workspace: errors.length ? 'in-workspace' : 'checked' });
       if (errors.length) return result('invalid', `Not ready. Fix these:\n${errors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`);
@@ -96,44 +123,76 @@ export const controller = createQuestTools({
       };
     },
 
-    // The package owns check -> confirm -> check -> submit. This just writes the contribution.
-    submit() {
+    // The package owns check -> confirm -> check -> submit. This just writes the contribution to the store.
+    async submit() {
       const q = activeQuest();
       const s = getState();
-      if (!q || !s.draft) return result('invalid', 'Not submitted. No quest is open. Call open-quest first.');
+      if (!q || q.type === 'access-photo') return result('invalid', 'This quest continues on Survey.');
+      if (!s.draft) return result('invalid', 'Not submitted. No quest is open. Call open-quest first.');
       const existing = s.contributions.find((c) => c.questId === q.id && c.status === 'rejected');
-      const contribution: Contribution = {
-        id: existing?.id ?? nextId('c'),
-        questId: q.id,
-        questTitle: q.title,
-        volunteerName: s.profile.name || 'A volunteer',
-        payload: s.draft,
-        status: 'submitted',
-        checkErrors: [],
-        submittedAt: new Date().toISOString(),
-      };
-      upsertContribution(contribution);
-      setState({ workspace: 'submitted' });
-      broadcast({ type: 'contribution:submitted', contributionId: contribution.id, questId: q.id });
-      toast(`Sent to a reviewer: ${safeText(q.placeName)}.`);
-      return result('submitted', `Submitted "${safeText(q.title)}" for review. A star lights when a reviewer approves it.`, { contributionId: contribution.id });
+      const id = existing?.id ?? nextId('c');
+      const volunteerName = s.profile.name || 'A volunteer';
+      try {
+        const sc = await store.upsert(id, { quest: toQuestRef(q), volunteerName, payload: { ...s.draft }, state: 'submitted', via: location.origin });
+        mergeContribution(sc);
+        setState({ workspace: 'submitted' });
+        broadcast({ type: 'contribution:submitted', contributionId: sc.id, questId: q.id });
+        toast(`Sent to a reviewer: ${safeText(q.placeName)}.`);
+        return result('submitted', `Submitted "${safeText(q.title)}" for review. A star lights when a reviewer approves it.`, { contributionId: sc.id });
+      } catch (e) {
+        return result('invalid', `Not submitted. ${(e as Error).message}`);
+      }
     },
 
-    approve(input) {
+    async approve(input) {
       const { contributionId, comment } = input;
       const s = getState();
       const c = s.contributions.find((x) => x.id === contributionId);
       if (!c || c.status !== 'submitted') return result('invalid', 'No submitted contribution with that id. Refresh the review queue and try again.');
       const reviewerName = s.profile.name || 'Reviewer';
-      upsertContribution({ ...c, status: 'approved', reviewedAt: new Date().toISOString(), reviewerName, reviewComment: comment?.slice(0, 200) });
-      broadcast({ type: 'contribution:approved', contributionId, questId: c.questId, reviewerName });
-      return result('approved', `Approved. A star lit for "${safeText(c.questTitle)}". The volunteer was told.`, { contributionId });
+      const q = s.quests.find((x) => x.id === c.questId);
+
+      let decision: 'approved' | 'stale' = 'approved';
+      let note = '';
+      let fromVersion: number | undefined, toVersion: number | undefined;
+      if (q?.osmRef && q.osmVersion != null) {
+        try {
+          const res = await fetch(`https://api.openstreetmap.org/api/0.6/${q.osmRef}.json`);
+          if (res.ok) {
+            const data = (await res.json()) as { elements?: { version?: number }[] };
+            const now = data.elements?.[0]?.version;
+            if (now != null && now !== q.osmVersion) { decision = 'stale'; fromVersion = q.osmVersion; toVersion = now; }
+          } else {
+            note = ' Source version not checked (OpenStreetMap unreachable).';
+          }
+        } catch {
+          note = ' Source version not checked (OpenStreetMap unreachable).';
+        }
+      }
+
+      try {
+        const sc = await store.review(contributionId, decision, reviewerName, comment?.slice(0, 200));
+        mergeContribution(sc);
+        broadcast(decision === 'stale'
+          ? { type: 'contribution:stale', contributionId, questId: c.questId, comment: `${safeText(c.questTitle)} changed on OpenStreetMap.` }
+          : { type: 'contribution:approved', contributionId, questId: c.questId, reviewerName });
+        if (decision === 'stale') {
+          return result('stale', `${safeText(c.questTitle)} changed on OpenStreetMap since this was opened (version ${fromVersion} → ${toVersion}). Marked stale. The volunteer can redo it.`, { contributionId });
+        }
+        return result('approved', `Approved. A star lit for "${safeText(c.questTitle)}". The volunteer was told.${note}`, { contributionId });
+      } catch (e) {
+        return result('invalid', `Not approved. ${(e as Error).message}`);
+      }
     },
   },
 
   available() {
     const s = getState();
     if (s.role === 'reviewer') return { approve: s.contributions.some((c) => c.status === 'submitted') };
+    const q = activeQuest();
+    if (q?.type === 'access-photo') {
+      return { find: true, open: true, check: { locked: 'This quest continues on Survey.' }, submit: { locked: 'This quest continues on Survey.' } };
+    }
     const open = s.workspace === 'in-workspace' || s.workspace === 'checked';
     return {
       find: true,
@@ -148,10 +207,16 @@ export const controller = createQuestTools({
 
 // ---------- reject: a UI-only store action, not a tool (SPEC.md) ----------
 
-export function rejectImpl(contributionId: string, comment: string) {
+export async function rejectImpl(contributionId: string, comment: string) {
   const s = getState();
   const c = s.contributions.find((x) => x.id === contributionId);
   if (!c || c.status !== 'submitted') return;
-  upsertContribution({ ...c, status: 'rejected', reviewedAt: new Date().toISOString(), reviewerName: s.profile.name || 'Reviewer', reviewComment: comment.slice(0, 200) });
-  broadcast({ type: 'contribution:rejected', contributionId, questId: c.questId, comment });
+  const reviewerName = s.profile.name || 'Reviewer';
+  try {
+    const sc = await store.review(contributionId, 'rejected', reviewerName, comment.slice(0, 200));
+    mergeContribution(sc);
+    broadcast({ type: 'contribution:rejected', contributionId, questId: c.questId, comment });
+  } catch (e) {
+    toast(`Not sent back. ${(e as Error).message}`);
+  }
 }

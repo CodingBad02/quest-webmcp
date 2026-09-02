@@ -1,12 +1,20 @@
 // End-to-end check in real Chrome with WebMCP enabled.
 // Calls tools through document.modelContext.executeTool, the same path a browser agent uses.
 // Usage: node tests/e2e.mjs [baseUrl]   (default http://localhost:4173)
+// The store and Survey are fixed at http://localhost:8787 (Quest's defaults when no VITE_STORE_URL
+// / VITE_SURVEY_URL is set — see src/state/storeClient.ts), matching how the preview is built for this test.
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const BASE = process.argv[2] ?? 'http://localhost:4173';
+const STORE = 'http://localhost:8787';
+const SURVEY_ORIGIN = 'http://localhost:8787';
 const SHOTS = 'test-results';
 mkdirSync(SHOTS, { recursive: true });
+
+// A 1x1 transparent PNG, for the Survey photo field.
+const PNG_PATH = `${SHOTS}/tiny.png`;
+writeFileSync(PNG_PATH, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'));
 
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
@@ -19,6 +27,37 @@ const call = (page, name, args = {}) => page.evaluate(async ([name, args]) => {
   return JSON.parse(r).content[0].text;
 }, [name, args]);
 const rackNames = (page) => page.$$eval('.qt-rack-list .qt-tool:not([data-state="locked"]):not([data-state="removing"]) .qt-tool-name', (els) => els.map((e) => e.textContent).sort());
+const rackRow = (page, name) => page.$$eval('.qt-rack-list .qt-tool', (els, name) => {
+  const el = els.find((e) => e.querySelector('.qt-tool-name')?.textContent === name);
+  return el ? { state: el.dataset.state, desc: el.querySelector('.qt-tool-desc')?.textContent ?? '' } : null;
+}, name);
+const envelope = (text) => JSON.parse(text.slice(text.lastIndexOf('quest/1 ') + 8));
+
+/** Poll the reviewer queue's DOM until `id` shows up as a pending item, or the timeout passes.
+ *  The store is shared, so "some tool is registered" is not proof our own item arrived — this is. */
+async function waitForPendingId(page, id, timeoutMs = 5000) {
+  const start = Date.now();
+  let ids = await page.$$eval('.review-head code', (els) => els.map((e) => e.textContent)).catch(() => []);
+  while (!ids.includes(id) && Date.now() - start < timeoutMs) {
+    await page.waitForTimeout(250);
+    ids = await page.$$eval('.review-head code', (els) => els.map((e) => e.textContent)).catch(() => []);
+  }
+  return ids;
+}
+
+/** Poll the sky's data-approved count until it reaches `expected`, or the timeout passes. Never
+ *  throws: a quest that Overpass returned outside the sky panel's fixed slice (buildCampaigns,
+ *  a pre-existing v1 cap) never lights a star, so this degrades to a clear FAIL, not a crash. */
+async function waitForApprovedCount(page, expected, timeoutMs = 5000) {
+  const start = Date.now();
+  let val = Number(await page.$eval('.sky-root', (e) => e.dataset.approved));
+  while (val !== expected && Date.now() - start < timeoutMs) {
+    await page.waitForTimeout(200);
+    val = Number(await page.$eval('.sky-root', (e) => e.dataset.approved));
+  }
+  return val;
+}
+
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-features=WebMCP'] });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
@@ -48,7 +87,7 @@ const opened = await call(vol, 'open-quest', { id });
 await vol.waitForSelector('.workspace');
 names = await toolNames(vol);
 check('4. open-quest adds check-contribution', names.includes('check-contribution') && !names.includes('submit-contribution'), opened.slice(0, 60));
-const openedEnvelope = JSON.parse(opened.slice(opened.lastIndexOf('quest/1 ') + 8));
+const openedEnvelope = envelope(opened);
 check('4b. open-quest machine line reports state open with a questId', openedEnvelope.state === 'open' && Boolean(openedEnvelope.questId), JSON.stringify(openedEnvelope));
 await vol.screenshot({ path: `${SHOTS}/02-workspace.png` });
 
@@ -76,10 +115,13 @@ check('7a. submit waits for the human click', stillPending === 'pending');
 await vol.click('dialog.qt-confirm .qt-btn-primary');
 const submitted = await submitPromise; await vol.waitForTimeout(300);
 names = await toolNames(vol);
-check('7b. submit succeeds after the click and unregisters check/submit', submitted.startsWith('Submitted') && !names.includes('submit-contribution') && !names.includes('check-contribution'), submitted.slice(0, 70));
+check('7b. submit succeeds after the click and unregisters check/submit (written to the store)', submitted.startsWith('Submitted') && !names.includes('submit-contribution') && !names.includes('check-contribution'), submitted.slice(0, 70));
 await vol.screenshot({ path: `${SHOTS}/05-submitted.png` });
 
-// Reviewer tab.
+// Reviewer tab. The store is shared and long-lived, so other sessions may already have
+// contributions sitting in it — every assertion below is scoped to our own contributionId,
+// never to "the queue" being some exact size, so leftover data can't make this flaky.
+const cid = envelope(submitted).contributionId;
 const rev = await ctx.newPage();
 rev.on('pageerror', (e) => console.log('[rev pageerror]', e.message));
 await rev.goto(`${BASE}/?role=reviewer`);
@@ -88,17 +130,18 @@ await rev.fill('#rname', 'Tom');
 const revTools = await toolNames(rev);
 check('8a. reviewer tab registers approve-contribution only', JSON.stringify(revTools) === JSON.stringify(['approve-contribution']), revTools.join(','));
 await rev.screenshot({ path: `${SHOTS}/06-review-queue.png` });
-const cid = await rev.$eval('.review-head code', (e) => e.textContent);
+const pendingBefore = await rev.$$eval('.review-head code', (els) => els.map((e) => e.textContent));
+const approvedBeforeHours = Number(await vol.$eval('.sky-root', (e) => e.dataset.approved));
 const approved = await call(rev, 'approve-contribution', { contributionId: cid, comment: 'Clear note. Thanks.' });
-check('8b. approve-contribution approves by id', approved.startsWith('Approved'), approved.slice(0, 60));
-const revToolsAfter = await toolNames(rev);
-check('8c. approve-contribution unregisters when the queue empties', revToolsAfter.length === 0);
+check('8b. approve-contribution approves by id, through the store', approved.startsWith('Approved'), approved.slice(0, 60));
+await rev.waitForTimeout(200);
+const pendingAfter = await rev.$$eval('.review-head code', (els) => els.map((e) => e.textContent)).catch(() => []);
+check('8c. approve-contribution removes our item from the reviewer queue', pendingBefore.includes(cid) && !pendingAfter.includes(cid), `before=${pendingBefore.length} after=${pendingAfter.length}`);
 
 await vol.bringToFront();
-await vol.waitForSelector('.sky-root[data-lit="1"]', { timeout: 5000 });
-const litCount = Number(await vol.$eval('.sky-root', (e) => e.dataset.lit));
+const approvedCount1 = await waitForApprovedCount(vol, approvedBeforeHours + 1, 5000);
 const wsState = await vol.$eval('.workspace', (e) => e.dataset.state);
-check('8d. volunteer tab lights a star and shows approved via BroadcastChannel', litCount === 1 && wsState === 'approved', `lit=${litCount} state=${wsState}`);
+check('8d. volunteer tab lights an approved (outlined) star and shows approved via BroadcastChannel', approvedCount1 === approvedBeforeHours + 1 && wsState === 'approved', `approved=${approvedCount1} state=${wsState}`);
 await vol.waitForTimeout(600);
 await vol.screenshot({ path: `${SHOTS}/07-approved.png` });
 
@@ -112,10 +155,78 @@ await off.reload();
 await off.waitForSelector('.cards .card', { timeout: 20000 });
 const src = await off.$eval('.pill[title="Where quests come from"]', (e) => e.textContent);
 check('9. Overpass blocked: quests load from the offline copy', /offline/.test(src), src);
+await off.close();
+
+// ---------- Cross-site proof: Quest -> Survey -> Quest (SPEC.md P0 Cross-site proof) ----------
+
+const foundAP = await call(vol, 'find-quests', { type: 'access-photo' });
+const apId = foundAP.match(/id=(\S+)/)?.[1];
+const openedAP = await call(vol, 'open-quest', { id: apId });
+await vol.waitForSelector('.workspace');
+const apEnvelope = envelope(openedAP);
+check('10. open-quest on an access-photo quest returns a Survey URL and handoff', Boolean(apEnvelope.next?.url?.startsWith(SURVEY_ORIGIN)) && Boolean(apEnvelope.next?.handoff), JSON.stringify(apEnvelope.next));
+const checkRow = await rackRow(vol, 'check-contribution');
+check("10b. Quest's rack shows check-contribution locked with the Survey message", checkRow?.state === 'locked' && checkRow.desc === 'This quest continues on Survey.', JSON.stringify(checkRow));
+
+const survey = await ctx.newPage();
+survey.on('pageerror', (e) => console.log('[survey pageerror]', e.message));
+survey.on('console', (m) => { if (m.type() === 'error') console.log('[survey console.error]', m.text()); });
+await survey.goto(apEnvelope.next.url);
+await survey.waitForSelector('.survey-card');
+const surveyTools = await toolNames(survey);
+check('11a. Survey lists check-contribution only (submit locked until checked)', JSON.stringify(surveyTools) === JSON.stringify(['check-contribution']), surveyTools.join(','));
+const handoffVisible = await survey.isVisible('.qt-handoff');
+const handoffText = await survey.$eval('#handoff-text', (e) => e.textContent).catch(() => '');
+check('11b. .qt-handoff is visible with "Carried from Quest"', handoffVisible && /Carried from Quest/.test(handoffText ?? ''), handoffText ?? '(missing)');
+
+const invalidSurvey = await call(survey, 'check-contribution');
+check('12a. check-contribution on the empty Survey form reports the two missing fields', invalidSurvey.startsWith('Not ready') && /wheelchair/.test(invalidSurvey) && /photo/.test(invalidSurvey), invalidSurvey.split('\n').slice(0, 3).join(' | '));
+
+await survey.selectOption('#wheelchair', 'yes');
+await survey.setInputFiles('#photo', PNG_PATH);
+await survey.waitForTimeout(300); // the photo field downscales the file asynchronously
+const readySurvey = await call(survey, 'check-contribution');
+check('12b. check-contribution passes once wheelchair and photo are set', readySurvey.startsWith('Ready'), readySurvey.split('\n')[0]);
+const surveyToolsAfter = await toolNames(survey);
+check('12c. submit-contribution appears on Survey', surveyToolsAfter.includes('submit-contribution'), surveyToolsAfter.join(','));
+
+const surveySubmitPromise = call(survey, 'submit-contribution');
+await survey.waitForSelector('dialog.qt-confirm[open]', { timeout: 5000 });
+await survey.waitForTimeout(500);
+const stillPendingSurvey = await Promise.race([surveySubmitPromise.then(() => 'resolved'), survey.waitForTimeout(300).then(() => 'pending')]);
+check('13a. submit-contribution on Survey waits for the click', stillPendingSurvey === 'pending');
+await survey.click('dialog.qt-confirm .qt-btn-primary');
+const submittedSurvey = await surveySubmitPromise;
+const submittedApEnvelope = envelope(submittedSurvey);
+check('13b. submit-contribution on Survey succeeds with a contributionId', submittedSurvey.startsWith('Submitted') && Boolean(submittedApEnvelope.contributionId), submittedSurvey.slice(0, 70));
+
+const contribRes = await fetch(`${STORE}/api/contributions/${submittedApEnvelope.contributionId}`);
+const contribData = await contribRes.json();
+check('13c. GET /api/contributions/:id reports state submitted, via the Survey origin', contribData.state === 'submitted' && contribData.via === SURVEY_ORIGIN, JSON.stringify({ state: contribData.state, via: contribData.via }));
+
+const pendingIds14 = await waitForPendingId(rev, submittedApEnvelope.contributionId, 5000);
+const revTools14 = await toolNames(rev);
+check('14a. approve-contribution registers on the reviewer tab within 5s of the cross-site submission', pendingIds14.includes(submittedApEnvelope.contributionId) && revTools14.includes('approve-contribution'), `pending=${pendingIds14.length} tools=${revTools14.join(',')}`);
+const approvedBefore = Number(await vol.$eval('.sky-root', (e) => e.dataset.approved));
+const approvedAP = await call(rev, 'approve-contribution', { contributionId: submittedApEnvelope.contributionId, comment: 'Clear photo. Thanks.' });
+check('14b. approve-contribution approves the Survey submission', approvedAP.startsWith('Approved'), approvedAP.slice(0, 70));
+
+await vol.bringToFront();
+const approvedAfter = await waitForApprovedCount(vol, approvedBefore + 1, 6000);
+check('14c. volunteer tab sky reports one more approved star within 5s', approvedAfter === approvedBefore + 1, `before=${approvedBefore} after=${approvedAfter}`);
+await vol.waitForTimeout(600);
+await vol.screenshot({ path: `${SHOTS}/08-cross-site-approved.png` });
+
+const exchangeAgain = await fetch(`${STORE}/api/handoffs/exchange`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', origin: SURVEY_ORIGIN },
+  body: JSON.stringify({ handoff: apEnvelope.next.handoff }),
+});
+check('15. Exchanging the same handoff a second time returns 410', exchangeAgain.status === 410, String(exchangeAgain.status));
 
 // Dark mode shot.
 const dark = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
-const dp = await dark.newPage(); await dp.goto(BASE); await dp.waitForSelector('.cards .card, .empty'); await dp.screenshot({ path: `${SHOTS}/08-dark.png` });
+const dp = await dark.newPage(); await dp.goto(BASE); await dp.waitForSelector('.cards .card, .empty'); await dp.screenshot({ path: `${SHOTS}/09-dark.png` });
 
 await browser.close();
 const failed = results.filter((r) => !r.ok);

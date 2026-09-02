@@ -15,18 +15,11 @@ export function checkOpeningHours(value: string): string | null {
   }
 }
 
-export function validate(p: ContributionPayload): string[] {
+/** Only verify-hours is validated here: access-photo is Survey's form now (DESIGN.md §7). */
+export function validate(p: Extract<ContributionPayload, { kind: 'verify-hours' }>): string[] {
   const errors: string[] = [];
-  if (p.kind === 'verify-hours') {
-    const e = checkOpeningHours(p.openingHours); if (e) errors.push(e);
-    if (!p.verifiedBy) errors.push('verified_by: choose how you checked: phone, visit, or website.');
-    if (p.note.trim().length < 10) errors.push('note: add at least 10 characters on how you confirmed the hours.');
-  } else {
-    if (!p.imageDataUrl) errors.push('photo: attach a photo of the entrance.');
-    else if (!p.imageDataUrl.startsWith('data:image/')) errors.push('photo: the file is not an image.');
-    else if (p.imageDataUrl.length > 2_000_000) errors.push('photo: image too large after resize. Try a smaller photo.');
-    if (!p.wheelchair) errors.push('wheelchair: choose yes, limited, or no.');
-    if (p.wheelchair === 'limited' && p.note.trim().length < 10) errors.push('note: explain what limits access, in at least 10 characters.');
-  }
+  const e = checkOpeningHours(p.openingHours); if (e) errors.push(e);
+  if (!p.verifiedBy) errors.push('verified_by: choose how you checked: phone, visit, or website.');
+  if (p.note.trim().length < 10) errors.push('note: add at least 10 characters on how you confirmed the hours.');
   return errors;
 }

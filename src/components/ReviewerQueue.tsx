@@ -25,7 +25,7 @@ function Item({ c }: { c: Contribution }) {
       <ul className="checklist">{CHECKS[p.kind].map((t) => <li key={t}><label><input type="checkbox" /> {t}</label></li>)}</ul>
       <div className="actions">
         <input className="grow" value={comment} placeholder="Optional note to the volunteer" onChange={(e) => setComment(e.target.value)} />
-        <button className="btn" onClick={() => { if (!comment.trim()) { alert('Say what to fix.'); return; } rejectImpl(c.id, comment.trim()); }}>Send back</button>
+        <button className="btn" onClick={() => { if (!comment.trim()) { alert('Say what to fix.'); return; } void rejectImpl(c.id, comment.trim()); }}>Send back</button>
         <button className="btn primary" onClick={() => { void controller.run('approve', { contributionId: c.id, comment: comment.trim() || undefined }, { viaUi: true }); }}>Approve</button>
       </div>
     </li>
