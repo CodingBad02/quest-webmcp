@@ -22,6 +22,7 @@ let contribution: StoredContribution | null = null;
 let store: ReturnType<typeof createStoreClient> | null = null;
 let checked = false;
 let submitted = false;
+let expired = false;
 
 // ---------- validation and the confirm preview ----------
 
@@ -69,7 +70,7 @@ const controller = createQuestTools({
   protocol: 'quest/1',
   operations: { check, submit },
   available: () => {
-    if (!contribution || submitted) return {};
+    if (!contribution || submitted || expired) return {};
     return { check: true, submit: checked ? true : { locked: 'Unlocks after check-contribution passes.' } };
   },
   confirm: createDialogConfirm(),
@@ -173,7 +174,15 @@ function renderDone() {
 function startCountdown(expiresAt: string) {
   const tick = () => {
     const ms = Date.parse(expiresAt) - Date.now();
-    if (ms <= 0 || submitted) { strip.hidden = submitted; if (!submitted) { strip.dataset.expired = ''; stripText.textContent = 'Handoff expired. Ask your agent to reopen this quest from Quest.'; stripTime.textContent = ''; } return; }
+    if (submitted) { strip.hidden = true; return; }
+    if (ms <= 0) {
+      // The grant is dead on the server too. Drop the tools and the form; nothing can be sent from here.
+      expired = true; store = null;
+      controller.refresh();
+      strip.dataset.expired = ''; stripText.textContent = 'Handoff expired. Ask your agent to reopen this quest from Quest.'; stripTime.textContent = '';
+      work.querySelectorAll('input, select, textarea, button').forEach((e) => { (e as HTMLInputElement).disabled = true; });
+      return;
+    }
     const s = Math.floor(ms / 1000);
     stripTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     setTimeout(tick, 1000);
@@ -189,9 +198,9 @@ async function boot() {
   try {
     const anon = createStoreClient(STORE_URL, 'exchange');
     const ex = await anon.exchange(token);
-    if (ex.action !== 'contribute' || !ex.session) return renderEmpty('This handoff is not for a survey.');
-    contribution = ex.contribution;
-    store = createStoreClient(STORE_URL, ex.session);
+    if (ex.action !== 'contribute' || !ex.grant) return renderEmpty('This handoff is not for a survey.');
+    contribution = ex.contribution as StoredContribution;
+    store = createStoreClient(STORE_URL, ex.grant);
     if (contribution.quest.type !== 'access-photo') return renderEmpty('This site handles step-free entry surveys only.');
     if (contribution.state !== 'open') return renderEmpty(`This contribution is already ${contribution.state}.`);
     history.replaceState(null, '', location.pathname);

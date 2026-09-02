@@ -12,10 +12,14 @@ const MARK = `${PROTOCOL} `;
 /** Human message first, then one machine line: `quest/1 {"ok":true,...}`. Always under 1,500 characters. */
 export function formatResult(r: QuestToolResult): string {
   const { message, protocol: _p, ...rest } = r;
-  const tail = `\n\n${MARK}${JSON.stringify(rest)}`;
+  let tail = `\n\n${MARK}${JSON.stringify(rest)}`;
+  if (tail.length > LIMITS.output - 40) {
+    // The machine line itself is oversized (a huge id or url). Keep the state and ok; drop the rest.
+    tail = `\n\n${MARK}${JSON.stringify({ ok: rest.ok, state: rest.state })}`;
+  }
   const room = LIMITS.output - tail.length;
   const msg = message.length > room ? `${message.slice(0, room - 1)}…` : message;
-  return msg + tail;
+  return (msg + tail).slice(0, LIMITS.output);
 }
 
 export function parseResult(text: string): QuestToolResult | null {

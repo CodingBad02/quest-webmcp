@@ -124,23 +124,24 @@ export function createQuestTools(config: QuestToolsConfig): QuestToolsController
       return (op as any)(input, ctx);
     }
 
-    // submit: check → confirm → check again → submit. The package owns this order; a site cannot skip it.
+    // submit: check → confirm → check again → submit. The package owns this order; a site cannot skip it,
+    // and a button click is not a substitute for the dialog: the person confirms the exact preview either way.
     const check = config.operations.check;
     if (!check) return result('invalid', 'This site cannot check contributions, so it cannot submit them.');
     const first = await check(input, ctx);
     if (!first.ok) return first;
-    if (!ctx.viaUi) {
-      if (confirming) return result('declined', 'Finish or close the current confirmation first.');
-      if (!first.confirm) return result('invalid', 'check-contribution returned no confirmation summary.');
-      confirming = true;
-      let outcome;
-      try { outcome = await config.confirm(first.confirm, { signal, timeoutMs }); } finally { confirming = false; }
-      if (outcome === 'declined') return result('declined', 'Kept editing. Nothing was sent.');
-      if (outcome === 'timeout') return result('declined', `No response in ${Math.round(timeoutMs / 1000)} seconds. Nothing was sent.`);
-      if (outcome === 'cancelled') return result('declined', 'Cancelled. Nothing was sent.');
-      const again = await check(input, ctx);
-      if (!again.ok) return again;
-    }
+    if (confirming) return result('declined', 'Finish or close the current confirmation first.');
+    if (!first.confirm) return result('invalid', 'check-contribution returned no confirmation summary.');
+    confirming = true;
+    let outcome;
+    try { outcome = await config.confirm(first.confirm, { signal, timeoutMs }); } finally { confirming = false; }
+    if (outcome === 'declined') return result('declined', 'Kept editing. Nothing was sent.');
+    if (outcome === 'timeout') return result('declined', `No response in ${Math.round(timeoutMs / 1000)} seconds. Nothing was sent.`);
+    if (outcome === 'cancelled') return result('declined', 'Cancelled. Nothing was sent.');
+    const again = await check(input, ctx);
+    if (!again.ok) return again;
+    // The person confirmed one exact preview. If the draft changed underneath, nothing is sent.
+    if (JSON.stringify(again.confirm) !== JSON.stringify(first.confirm)) return result('declined', 'The form changed after you confirmed. Nothing was sent. Check again.');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (config.operations.submit as any)(input, ctx);
   }
@@ -160,7 +161,8 @@ export function createQuestTools(config: QuestToolsConfig): QuestToolsController
         name: TOOL_NAMES[verb],
         description: descriptions[verb],
         inputSchema: schemas[verb],
-        annotations: { readOnlyHint: READ_ONLY[verb] === true, untrustedContentHint: verb === 'find' || verb === 'open' },
+        // Every result can carry text a person or another site typed: place names, notes, quotes, URLs.
+        annotations: { readOnlyHint: READ_ONLY[verb] === true, untrustedContentHint: true },
         execute: async (input: Record<string, unknown>, exec?: { signal?: AbortSignal }) => {
           executing.add(verb);
           status.set(verb, 'executing'); emit();
@@ -172,7 +174,7 @@ export function createQuestTools(config: QuestToolsConfig): QuestToolsController
             if (status.get(verb) === 'executing') status.set(verb, 'available');
             emit();
             // A tool may unregister itself by changing state. Abort only after the result has left the page.
-            if (deferredAbort.has(verb)) { deferredAbort.delete(verb); later(() => abortNow(verb), 50); }
+            if (deferredAbort.has(verb)) { deferredAbort.delete(verb); later(() => { if (config.available()[verb] !== true) abortNow(verb); }, 50); }
           }
         },
       };

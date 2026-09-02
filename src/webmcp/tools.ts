@@ -285,7 +285,6 @@ export const controller = createQuestTools({
       const q = s.quests.find((x) => x.id === c.questId);
 
       let decision: 'approved' | 'stale' = 'approved';
-      let note = '';
       let staleDetail = '';
       if (q?.osmRef && q.osmVersion != null) {
         try {
@@ -298,15 +297,16 @@ export const controller = createQuestTools({
               staleDetail = `${safeText(c.questTitle)} changed on OpenStreetMap since this was opened (version ${q.osmVersion} → ${now}).`;
             }
           } else {
-            note = ' Source version not checked (OpenStreetMap unreachable).';
+            return result('invalid', 'Not approved. OpenStreetMap did not answer, so the element version could not be checked. Try again in a moment.');
           }
         } catch {
-          note = ' Source version not checked (OpenStreetMap unreachable).';
+          return result('invalid', 'Not approved. OpenStreetMap could not be reached, so the element version could not be checked. Try again in a moment.');
         }
       } else if (q?.type === 'cite-claim' && q.claim) {
+        // Approval is the gate before anything public. Fail closed: no verified source identity, no approval.
         const claimCheck = await checkClaimIdentity(q.claim);
+        if (claimCheck.unreachable) return result('invalid', 'Not approved. Wikidata could not be reached, so the claim could not be re-checked. Try again in a moment.');
         if (!claimCheck.ok) { decision = 'stale'; staleDetail = claimCheck.reason!; }
-        else if (claimCheck.unreachable) note = ' Wikidata could not be reached; the claim was not re-checked.';
       }
 
       try {
@@ -319,7 +319,7 @@ export const controller = createQuestTools({
           return result('stale', `${staleDetail} Marked stale. The volunteer can redo it.`, { contributionId });
         }
         const lit = q?.type === 'cite-claim' ? `A line lit in the knowledge graph for "${safeText(c.questTitle)}".` : `A star lit for "${safeText(c.questTitle)}".`;
-        return result('approved', `Approved. ${lit} The volunteer was told.${note}`, { contributionId });
+        return result('approved', `Approved. ${lit} The volunteer was told.`, { contributionId });
       } catch (e) {
         return result('invalid', `Not approved. ${(e as Error).message}`);
       }

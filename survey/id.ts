@@ -76,7 +76,7 @@ async function boot() {
   try {
     const ex = await createStoreClient(STORE_URL, 'exchange').exchange(token);
     if (ex.action !== 'stage') return say('This handoff is not for staging.', 'warn');
-    c = ex.contribution;
+    c = ex.contribution as StoredContribution;
     history.replaceState(null, '', location.pathname);
     strip.hidden = false;
     stripText.textContent = `Carried from Quest · ${c.quest.placeName} · approved by ${c.reviewerName ?? 'a reviewer'} · expires`;

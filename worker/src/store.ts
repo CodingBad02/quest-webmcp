@@ -1,10 +1,12 @@
 import { DurableObject } from 'cloudflare:workers';
-import type { ExchangeResponse, Handoff, StoredContribution, StoredState } from './shapes.ts';
+import type { ExchangeResponse, Grant, Handoff, StoredContribution, StoredState } from './shapes.ts';
 
 const MAX_HANDOFF_TTL = 15 * 60;
 const MAX_BODY = 3_000_000; // one downscaled photo as a data URL fits
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+/** The credential never leaves the store. */
+const pub = ({ ownerSession: _o, ...c }: StoredContribution) => c;
 const fail = (status: number, error: string) => json({ error }, status);
 
 async function sha256(s: string) {
@@ -32,7 +34,7 @@ export class Store extends DurableObject {
     if (request.method === 'GET' && path === '/contributions') return this.list(url.searchParams.get('state'));
     if (request.method === 'GET' && (r = m(/^\/contributions\/([\w-]+)$/))) {
       const c = await this.ctx.storage.get<StoredContribution>(`c:${r[1]}`);
-      return c ? json(c) : fail(404, 'No such contribution.');
+      return c ? json(pub(c)) : fail(404, 'No such contribution.');
     }
     if (request.method === 'PUT' && (r = m(/^\/contributions\/([\w-]+)$/))) return this.upsert(r[1], await this.body(request), session);
     if (request.method === 'POST' && (r = m(/^\/contributions\/([\w-]+)\/review$/))) return this.review(r[1], await this.body(request), session);
@@ -50,17 +52,25 @@ export class Store extends DurableObject {
   private async list(state: string | null) {
     const map = await this.ctx.storage.list<StoredContribution>({ prefix: 'c:' });
     const all = [...map.values()].filter((c) => !state || c.state === state).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    return json(all);
+    return json(all.map(pub));
   }
 
-  /** Create or update a contribution. Only the owning session may write. */
+  /** Does this session hold a live grant for this contribution? Grants come from handoff exchange. */
+  private async grantFor(session: string, contributionId: string): Promise<boolean> {
+    const g = await this.ctx.storage.get<Grant>(`g:${session}`);
+    return !!g && g.contributionId === contributionId && Date.parse(g.expiresAt) > Date.now();
+  }
+
+  /** Create or update a contribution. The owning session, or a live grant for this one contribution, may write.
+   *  Once submitted, a contribution is frozen until a reviewer sends it back. Quest provenance never changes. */
   private async upsert(id: string, b: Record<string, unknown>, session: string) {
     if (!session) return fail(401, 'Missing session.');
     const key = `c:${id}`;
     const existing = await this.ctx.storage.get<StoredContribution>(key);
-    if (existing && existing.ownerSession !== session) return fail(403, 'Not your contribution.');
-    if (existing && !['open', 'rejected'].includes(existing.state) && b.state !== existing.state) return fail(409, `Cannot change a ${existing.state} contribution.`);
-    const quest = (b.quest ?? existing?.quest) as StoredContribution['quest'] | undefined;
+    if (existing && existing.ownerSession !== session && !(await this.grantFor(session, id))) return fail(403, 'Not your contribution.');
+    if (!existing && (await this.ctx.storage.get<Grant>(`g:${session}`))) return fail(403, 'A handoff grant cannot create contributions.');
+    if (existing && !['open', 'rejected'].includes(existing.state)) return fail(409, `A ${existing.state} contribution cannot be changed.`);
+    const quest = (existing?.quest ?? b.quest) as StoredContribution['quest'] | undefined;
     if (!quest?.id || !quest.type) return fail(400, 'quest.id and quest.type are required.');
     const state = (b.state as StoredState) ?? existing?.state ?? 'open';
     if (!['open', 'submitted'].includes(state)) return fail(400, 'A volunteer may set state to open or submitted only.');
@@ -68,7 +78,7 @@ export class Store extends DurableObject {
     const c: StoredContribution = {
       id,
       quest: { ...quest, title: str(quest.title, 120), placeName: str(quest.placeName, 80), license: str(quest.license, 60) || 'Open Database License (ODbL)' },
-      ownerSession: session,
+      ownerSession: existing?.ownerSession ?? session,
       volunteerName: str(b.volunteerName ?? existing?.volunteerName, 40) || 'A volunteer',
       payload: (b.payload as Record<string, unknown>) ?? existing?.payload ?? {},
       state,
@@ -77,7 +87,7 @@ export class Store extends DurableObject {
       submittedAt: state === 'submitted' ? now : existing?.submittedAt,
     };
     await this.ctx.storage.put(key, c);
-    return json(c, existing ? 200 : 201);
+    return json(pub(c), existing ? 200 : 201);
   }
 
   /** Approve or send back. A different session than the owner. Only submitted contributions. */
@@ -98,7 +108,7 @@ export class Store extends DurableObject {
       reviewComment: str(b.comment, 300) || undefined,
     };
     await this.ctx.storage.put(key, next);
-    return json(next);
+    return json(pub(next));
   }
 
   /** Mint a short-lived, single-use capability bound to one contribution, one origin, one action.
@@ -132,7 +142,12 @@ export class Store extends DurableObject {
     const c = await this.ctx.storage.get<StoredContribution>(`c:${h.contributionId}`);
     if (!c) return fail(404, 'The contribution behind this handoff is gone.');
     await this.ctx.storage.put(key, { ...h, used: true });
-    const res: ExchangeResponse = { contribution: c, action: h.action, expiresAt: h.expiresAt, ...(h.action === 'contribute' ? { session: c.ownerSession } : {}) };
+    const res: ExchangeResponse = { contribution: pub(c), action: h.action, expiresAt: h.expiresAt };
+    if (h.action === 'contribute') {
+      const grant = token();
+      await this.ctx.storage.put(`g:${grant}`, { contributionId: c.id, expiresAt: h.expiresAt } satisfies Grant);
+      res.grant = grant;
+    }
     return json(res);
   }
 }

@@ -168,7 +168,7 @@ test('submit: a draft that stops validating after confirmation is not submitted'
   controller.destroy();
 });
 
-test('submit via UI click skips the dialog but still revalidates', async () => {
+test('submit via a UI button still confirms and revalidates: the click is not the confirmation', async () => {
   const { controller, calls, setReady } = harness();
   await controller.run('open', { id: 'q1' });
   setReady(true);
@@ -176,7 +176,25 @@ test('submit via UI click skips the dialog but still revalidates', async () => {
   calls.length = 0;
   const r = await controller.run('submit', {}, { viaUi: true });
   assert.equal(r.state, 'submitted');
-  assert.deepEqual(calls, ['check', 'submit']);
+  assert.deepEqual(calls, ['check', 'confirm:Mo-Fr 08:00-17:00', 'check', 'submit']);
+  controller.destroy();
+});
+
+test('submit: a draft that changes after confirmation is not sent, even if it still validates', async () => {
+  let hours = 'Mo-Fr 08:00-17:00';
+  let submitted = 0;
+  const { controller } = harness({
+    confirm: async () => { hours = 'Mo-Su 00:00-24:00'; return 'confirmed'; },
+    operations: {
+      check: () => ({ ...result('checked', 'Ready.'), confirm: { summary: [['Opening hours', hours]], destination: 'd', visibility: 'v', license: 'l' } }),
+      submit: () => { submitted++; return result('submitted', 'Submitted.'); },
+    },
+    available: () => ({ check: true, submit: true }),
+  });
+  const r = await controller.run('submit');
+  assert.equal(r.state, 'declined');
+  assert.match(r.message, /changed after you confirmed/);
+  assert.equal(submitted, 0);
   controller.destroy();
 });
 

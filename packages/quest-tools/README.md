@@ -44,7 +44,8 @@ const tools = createQuestTools({
 tools.refresh();                                  // call again whenever page state changes
 mountRack(document.querySelector('#rack'), tools); // optional: the capability rack, DESIGN.md §5a markup
 
-// Your own buttons call the same functions the agent calls.
+// Your own buttons call the same functions the agent calls. A button click is not the confirmation:
+// submit still shows the dialog, rechecks, and refuses if the draft changed after the click.
 button.onclick = () => tools.run('submit', {}, { viaUi: true });
 ```
 

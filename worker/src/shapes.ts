@@ -48,10 +48,17 @@ export interface Handoff {
   used: boolean;
 }
 
+/** A scoped capability minted on exchange: writes to one contribution, until the handoff's expiry. */
+export interface Grant {
+  contributionId: string;
+  expiresAt: string;
+}
+
 export interface ExchangeResponse {
-  contribution: StoredContribution;
+  /** Public view: never carries `ownerSession`. */
+  contribution: Omit<StoredContribution, 'ownerSession'>;
   action: 'contribute' | 'stage';
-  /** contribute only: the right to act as the volunteer for this one contribution. */
-  session?: string;
+  /** contribute only: send as `x-session` to write this one contribution until `expiresAt`. */
+  grant?: string;
   expiresAt: string;
 }
