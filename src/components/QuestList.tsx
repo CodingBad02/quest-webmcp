@@ -64,7 +64,7 @@ export function QuestList() {
           </ul>
         </div>
       )}
-      <p className="muted small">{quests.length} open quests in central Bengaluru. Showing the five that fit you best.</p>
+      <p className="muted small">{quests.length} open quests in {profile.place.label}. Showing the five that fit you best.</p>
     </div>
   );
 }

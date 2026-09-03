@@ -31,6 +31,10 @@ Every tool returns text that ends with one machine line: `quest/1 {"ok":true,"st
 
 The agent never does the volunteer's task. No tool argument accepts evidence.
 
+## Where quests come from
+
+The profile has a place. Type one (`Koramangala, Bengaluru`) or press `Use my location`; Nominatim turns either into coordinates. Both adapters search around it: OpenStreetMap within 1 km, Wikidata within 6 km. The sky centres on it. An agent can do the same with `find-quests { near: "Koramangala, Bengaluru" }`. The bundled offline copies cover the default place, central Bengaluru; anywhere else the app is live or says `OpenStreetMap unreachable for <place>`.
+
 ## Quest types
 
 | Type | Source | Human does | Agent checks |

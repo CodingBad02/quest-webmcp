@@ -146,11 +146,14 @@ await vol.waitForTimeout(600);
 await vol.screenshot({ path: `${SHOTS}/07-approved.png` });
 
 // Offline fallback.
+// The Overpass cache key now carries the place (rounded to 3 decimals), so clear every entry,
+// not just the old fixed key, or a cached Bengaluru fetch from an earlier page would mask this.
+const clearOverpassCache = () => { for (const k of Object.keys(localStorage)) if (k.startsWith('quest.overpass.v1')) localStorage.removeItem(k); };
 const off = await ctx.newPage();
 await off.route('**overpass-api.de/**', (r) => r.abort());
-await off.evaluate(() => localStorage.removeItem('quest.overpass.v1')).catch(() => {});
+await off.evaluate(clearOverpassCache).catch(() => {});
 await off.goto(BASE);
-await off.evaluate(() => localStorage.removeItem('quest.overpass.v1'));
+await off.evaluate(clearOverpassCache);
 await off.reload();
 await off.waitForSelector('.cards .card', { timeout: 20000 });
 const src = await off.$eval('.pill[title="Where quests come from"]', (e) => e.textContent);
@@ -243,7 +246,8 @@ for (let i = 0; i < 60 && !/Staged|changed on OpenStreetMap|Could not|not in the
 await idPage.screenshot({ path: `${SHOTS}/09-id-staged.png` });
 // Staged, or an honest version conflict, are both correct. Anything else is a failure.
 check('15c. iD loads the live element and stages the diff without uploading (or reports a version conflict)', /^Staged, not uploaded|changed on OpenStreetMap/.test(idStatus), idStatus.slice(0, 90));
-const idEdits = await idPage.title();
+let idEdits = await idPage.title();
+for (let i = 0; i < 10 && !/^\(1\)/.test(idEdits); i++) { await idPage.waitForTimeout(500); idEdits = await idPage.title(); } // iD updates the title after its history debounce
 check('15d. iD shows one unsaved edit in its title', /^\(1\)/.test(idEdits) || /changed on OpenStreetMap/.test(idStatus), idEdits.slice(0, 40));
 await idPage.close();
 
@@ -292,6 +296,22 @@ const kgApproved = await vol.$$eval('.kg-claim[data-state="approved"]', (els) =>
 check('24. the volunteer home knowledge graph shows an approved edge', kgApproved >= 1, `approved edges=${kgApproved}`);
 await vol.locator('.kg-svg').scrollIntoViewIfNeeded();
 await vol.screenshot({ path: `${SHOTS}/10-knowledge-graph.png` });
+
+// ---------- Location as a profile field: typed place first, browser geolocation second ----------
+// Nominatim and Overpass can be slow; find-quests' own network timeouts (8s geocode + up to 10s
+// per adapter, run concurrently) bound this well under Playwright's default evaluate wait.
+const foundNear = await call(vol, 'find-quests', { near: 'Koramangala, Bengaluru' });
+check('25. find-quests with `near` geocodes the place and searches around it', foundNear.startsWith('Found') && /Koramangala/.test(foundNear), foundNear.split('\n')[0]);
+
+await vol.waitForFunction(() => document.querySelector('.sky-legend')?.textContent?.includes('Koramangala'), null, { timeout: 15000 }).catch(() => {});
+const legendText = await vol.$eval('.sky-legend', (e) => e.textContent).catch(() => '');
+check('26. the sky legend/campaign caption reflects the new place', /Koramangala/.test(legendText ?? ''), (legendText ?? '').slice(0, 160));
+
+await vol.waitForTimeout(300);
+await vol.screenshot({ path: `${SHOTS}/12-place-set.png`, fullPage: true });
+
+const foundBadPlace = await call(vol, 'find-quests', { near: 'zzqx-not-a-place-zzqx' });
+check('27. find-quests with an unresolvable place returns invalid with an actionable message', envelope(foundBadPlace).state === 'invalid' && /Could not find/.test(foundBadPlace), foundBadPlace.slice(0, 120));
 
 // Dark mode shot.
 const dark = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });

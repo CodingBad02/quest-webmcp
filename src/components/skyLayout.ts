@@ -6,11 +6,10 @@
  * streets. Each campaign gets its own panel across the width of the sky; without panels the
  * `hours` and `access` stars for one OSM element would sit on the same pixel.
  */
-import type { Campaign, Contribution, Quest, QuestType } from '../types';
+import type { Campaign, Contribution, Place, Quest, QuestType } from '../types';
 
 export type SkyMode = 'hero' | 'band';
 
-export const CENTER = { lat: 12.9716, lon: 77.5946 };
 export const PANEL_GAP = 40;
 const PANEL_PAD = 20;
 /** Half-width of the depth band around the constellation plane, world px. The band is short, so it gets less. */
@@ -82,18 +81,18 @@ function mst(pts: { u: number; v: number }[]): [number, number][] {
   return edges;
 }
 
-export function buildSkyModel(campaigns: Campaign[], quests: Quest[]): SkyModel {
+export function buildSkyModel(campaigns: Campaign[], quests: Quest[], center: Place): SkyModel {
   const byId = new Map(quests.map((q) => [q.id, q]));
   const stars: StarNode[] = [];
   const edges: [number, number][] = [];
   const panels: SkyPanel[] = [];
 
-  // Shared geographic frame across every placed quest, equirectangular around the demo centre.
-  const cosLat = Math.cos((CENTER.lat * Math.PI) / 180);
+  // Shared geographic frame across every placed quest, equirectangular around the profile's place.
+  const cosLat = Math.cos((center.lat * Math.PI) / 180);
   const placed = campaigns.flatMap((c) => c.questIds.map((id) => byId.get(id))).filter((q): q is Quest => !!q && q.lat != null && q.lon != null);
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const q of placed) {
-    const x = (q.lon! - CENTER.lon) * cosLat, y = q.lat! - CENTER.lat;
+    const x = (q.lon! - center.lon) * cosLat, y = q.lat! - center.lat;
     minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
   }
   const spanX = Math.max(maxX - minX, 1e-6), spanY = Math.max(maxY - minY, 1e-6);
@@ -109,8 +108,8 @@ export function buildSkyModel(campaigns: Campaign[], quests: Quest[]): SkyModel 
       const hasPlace = q.lat != null && q.lon != null;
       // Every P0 adapter (OSM) returns real coordinates; a quest without one would have nowhere
       // honest to sit, so it renders at the panel's centre rather than a fabricated position.
-      const u = hasPlace ? ((q.lon! - CENTER.lon) * cosLat - minX) / spanX : 0.5;
-      const v = hasPlace ? (q.lat! - CENTER.lat - minY) / spanY : 0.5;
+      const u = hasPlace ? ((q.lon! - center.lon) * cosLat - minX) / spanX : 0.5;
+      const v = hasPlace ? (q.lat! - center.lat - minY) / spanY : 0.5;
       const z = r() * 2 - 1;
       stars.push({ questId: id, campaignId: c.id, placeName: q.placeName, gap: GAP_TEXT[q.type], u, v, z, placed: hasPlace, seed });
       local.push({ u, v });

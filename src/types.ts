@@ -1,11 +1,29 @@
 export type QuestType = 'verify-hours' | 'access-photo' | 'cite-claim';
 
+/** Where quests are searched around. Typed place first, browser geolocation second (both via
+ *  src/data/geocode.ts); every adapter and the sky follow it. */
+export interface Place {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
+export const DEFAULT_PLACE: Place = { label: 'central Bengaluru', lat: 12.9716, lon: 77.5946 };
+
+/** True once a place is close enough to the built-in default to reuse its bundled fallback JSON
+ *  (overpass.ts, wikidata.ts). A tolerance, not an exact match: the default itself was never
+ *  geocoded, so a geocoded "central Bengaluru" would not land on the exact same floats. */
+export function isDefaultPlace(place: Place): boolean {
+  return Math.abs(place.lat - DEFAULT_PLACE.lat) < 1e-3 && Math.abs(place.lon - DEFAULT_PLACE.lon) < 1e-3;
+}
+
 export interface Profile {
   name: string;
   minutesAvailable: number;
   skills: string[];
   languages: string[];
   accessibilityNeeds: string[];
+  place: Place;
 }
 
 /** A Wikidata statement without a reference: the entity, the property, and the value it claims.

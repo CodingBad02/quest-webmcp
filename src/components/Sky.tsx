@@ -40,7 +40,8 @@ export function Sky({ size }: { size: SkyMode }) {
   const campaigns = useAppState((s) => s.campaigns);
   const quests = useAppState((s) => s.quests);
   const contributions = useAppState((s) => s.contributions);
-  const model = useMemo(() => buildSkyModel(campaigns, quests), [campaigns, quests]);
+  const place = useAppState((s) => s.profile.place);
+  const model = useMemo(() => buildSkyModel(campaigns, quests, place), [campaigns, quests, place]);
   const tiers = useMemo(() => starTiers(contributions), [contributions]);
   const tierById = useMemo(() => {
     const m = new Map<string, StarTier>();

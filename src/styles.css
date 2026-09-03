@@ -138,6 +138,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .profile .field { margin: 0; }
 .profile .field.chips { grid-column: 1 / -1; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
 .profile .field.chips legend { float: left; padding: 0; margin: 0 8px 0 0; }
+.profile .field.near { grid-column: 1 / -1; }
+.near-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.near-row input { flex: 1 1 220px; min-width: 160px; }
+.near-row .btn.small { margin-left: 0; flex: 0 0 auto; }
 .field { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
 .field.inline { flex-direction: row; align-items: center; gap: 12px; }
 .field label, .field legend { font-size: 14px; color: var(--muted); font-weight: 500; }
@@ -325,6 +329,8 @@ textarea { resize: vertical; }
   .profile { grid-template-columns: 1fr; padding: 18px; margin-bottom: 28px; }
   .profile .field.chips { grid-column: 1; align-items: flex-start; }
   .profile .field.chips legend { width: 100%; margin-bottom: 2px; }
+  .near-row { flex-direction: column; align-items: stretch; }
+  .near-row .btn.small { width: 100%; }
   .card { grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto auto; padding: 16px; }
   .card-glyph { grid-row: 1 / span 3; }
   .card-meta { grid-column: 2; grid-row: 3; text-align: left; max-width: none; }

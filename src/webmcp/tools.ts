@@ -4,15 +4,16 @@
  */
 import { createDialogConfirm, createQuestTools, result, safeText } from '@gatherlight/quest-tools';
 import type { QuestRef } from '../../worker/src/client.ts';
-import { activeQuest, getState, mergeContribution, nextId, openQuest, setState, toast } from '../state/store';
+import { activeQuest, getState, mergeContribution, nextId, openQuest, setPlace, setState, toast } from '../state/store';
 import { store, SURVEY_URL } from '../state/storeClient';
 import { broadcast } from '../channel/broadcast';
+import { geocode } from '../data/geocode';
 import { validate, validateCiteClaim } from '../validators';
 import type { ClaimRef, ContributionPayload, Quest } from '../types';
 
 // ---------- find ----------
 
-export interface FindArgs { minutesAvailable?: number; skills?: string[]; languages?: string[]; remoteOnly?: boolean; type?: string }
+export interface FindArgs { minutesAvailable?: number; skills?: string[]; languages?: string[]; remoteOnly?: boolean; type?: string; near?: string }
 
 const SKILL_ALIASES: Record<string, string> = {
   phone: 'phone', call: 'phone', calling: 'phone', talk: 'phone',
@@ -187,10 +188,19 @@ async function checkCiteClaim(q: Quest, draft: Extract<ContributionPayload, { ki
 export const controller = createQuestTools({
   protocol: 'quest/1',
   operations: {
-    find(input) {
-      const list = findQuestsImpl(input as FindArgs);
-      if (!list.length) return result('available', 'No quests fit. Try more minutes, or allow in-person quests.');
-      return result('available', `Found ${list.length} quests:\n${list.map(fmtQuest).join('\n')}`);
+    async find(input) {
+      const args = input as FindArgs;
+      const near = args.near?.trim();
+      if (near && near !== getState().profile.place.label) {
+        const place = await geocode(near);
+        if (!place) return result('invalid', `Could not find "${safeText(near, 60)}". Try a neighbourhood and city, e.g. "Koramangala, Bengaluru".`);
+        await setPlace(place);
+        controller.refresh();
+      }
+      const list = findQuestsImpl(args);
+      const label = getState().profile.place.label;
+      if (!list.length) return result('available', `No quests fit near ${label}. Try more minutes, or allow in-person quests.`);
+      return result('available', `Found ${list.length} quests near ${label}:\n${list.map(fmtQuest).join('\n')}`);
     },
 
     async open(input) {
@@ -343,6 +353,23 @@ export const controller = createQuestTools({
   },
 
   confirm: createDialogConfirm(),
+
+  descriptions: {
+    find: 'Find quests that fit the volunteer\'s time and skills, optionally near a place. Pass `near` to search a different place, e.g. "Koramangala, Bengaluru". Returns up to five with ids. Call this first.',
+  },
+
+  inputSchemas: {
+    find: {
+      type: 'object',
+      properties: {
+        minutesAvailable: { type: 'number', description: 'Minutes the volunteer has right now' },
+        skills: { type: 'array', items: { type: 'string' }, description: 'What the volunteer can do, e.g. phone, photo, visit' },
+        type: { type: 'string', description: 'Limit to one quest type' },
+        remoteOnly: { type: 'boolean', description: 'Only quests that can be done from home' },
+        near: { type: 'string', description: 'A place to search around, e.g. "Koramangala, Bengaluru"' },
+      },
+    },
+  },
 });
 
 // ---------- reject: a UI-only store action, not a tool (SPEC.md) ----------

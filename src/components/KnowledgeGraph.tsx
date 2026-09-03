@@ -103,7 +103,7 @@ export function KnowledgeGraph() {
   return (
     <div className="kg" data-sourced={sourcedTotal}>
       <div className="section-head">
-        <h2>Sources, Bengaluru</h2>
+        <h2>Sources, {profile.place.label}</h2>
         <p className="muted">Wikidata statements a volunteer found a reliable, independent source for.</p>
         <p className="kg-caption">{sourcedTotal} / {claimTotal} claims sourced.</p>
       </div>

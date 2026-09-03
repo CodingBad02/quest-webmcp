@@ -1,12 +1,14 @@
 import { useSyncExternalStore } from 'react';
 import type { StoredContribution } from '../../worker/src/client.ts';
 import { store } from './storeClient';
-import type { AppState, Contribution, ContributionPayload, Quest, QuestType, WorkspaceState } from '../types';
+import { buildCampaigns, clearOverpassCache, loadQuests } from '../data/overpass';
+import { buildWikidataCampaigns, clearWikidataCache, loadWikidataQuests } from '../data/wikidata';
+import { DEFAULT_PLACE, type AppState, type Contribution, type ContributionPayload, type Place, type Quest, type QuestType, type WorkspaceState } from '../types';
 
 const KEY = 'quest.state.v1';
 
 const defaultState = (): AppState => ({
-  profile: { name: '', minutesAvailable: 20, skills: [], languages: ['English'], accessibilityNeeds: [] },
+  profile: { name: '', minutesAvailable: 20, skills: [], languages: ['English'], accessibilityNeeds: [], place: DEFAULT_PLACE },
   quests: [],
   campaigns: [],
   wdCampaigns: [],
@@ -29,7 +31,7 @@ function load(): AppState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return base;
     const saved = JSON.parse(raw) as Partial<AppState>;
-    return { ...base, profile: saved.profile ?? base.profile };
+    return { ...base, profile: { ...base.profile, ...saved.profile } };
   } catch {
     return base;
   }
@@ -59,6 +61,39 @@ export function useAppState<T>(sel: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => sel(state), () => sel(state));
 }
 
+// ---------- quest loading: follows the profile's place ----------
+
+/** Loads both adapters for the current place. Callers (App.tsx on boot, setPlace below) call
+ *  `controller.refresh()` themselves after awaiting this — store.ts stays free of a webmcp import. */
+export async function reloadQuests() {
+  setState({ questSource: 'loading' });
+  const place = state.profile.place;
+  const [osm, wd] = await Promise.all([loadQuests(place), loadWikidataQuests(place)]);
+  setState({ quests: [...osm.quests, ...wd.quests], questSource: osm.source, ...campaignsFor([...osm.quests, ...wd.quests], place, state.contributions) });
+}
+
+/** Panels are rebuilt whenever quests or contributions change: worked places keep their star, open ones fill the rest. */
+function campaignsFor(quests: Quest[], place: Place, contributions: Contribution[]) {
+  const worked = new Set(contributions.filter((c) => c.status !== 'rejected').map((c) => c.questId));
+  return {
+    campaigns: buildCampaigns(quests.filter((q) => q.type !== 'cite-claim'), place, worked),
+    wdCampaigns: buildWikidataCampaigns(quests.filter((q) => q.type === 'cite-claim'), place, worked),
+  };
+}
+
+/** Changing the place drops the volunteer back to browsing, frees the old place's caches, and
+ *  reloads quests around the new one. */
+export async function setPlace(place: Place) {
+  const old = state.profile.place;
+  setState({
+    profile: { ...state.profile, place },
+    activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], checkTitle: null, handoff: null,
+  });
+  clearOverpassCache(old);
+  clearWikidataCache(old);
+  await reloadQuests();
+}
+
 // ---------- the shared store (SPEC.md's Coordinator) ----------
 
 function toContribution(sc: StoredContribution): Contribution {
@@ -79,14 +114,16 @@ function toContribution(sc: StoredContribution): Contribution {
 
 export function mergeContribution(sc: StoredContribution) {
   const c = toContribution(sc);
-  setState({ contributions: [...state.contributions.filter((x) => x.id !== c.id), c] });
+  const contributions = [...state.contributions.filter((x) => x.id !== c.id), c];
+  setState({ contributions, ...campaignsFor(state.quests, state.profile.place, contributions) });
 }
 
 let storeWarned = false;
 export async function loadContributionsFromStore() {
   try {
     const list = await store.list();
-    setState({ contributions: list.map(toContribution) });
+    const contributions = list.map(toContribution);
+    setState({ contributions, ...campaignsFor(state.quests, state.profile.place, contributions) });
   } catch {
     if (!storeWarned) {
       storeWarned = true;

@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { getState, loadContributionsFromStore, setState, subscribe, toast, useAppState } from './state/store';
-import { buildCampaigns, loadQuests } from './data/overpass';
-import { buildWikidataCampaigns, loadWikidataQuests } from './data/wikidata';
+import { getState, loadContributionsFromStore, reloadQuests, setState, subscribe, toast, useAppState } from './state/store';
+import { isDefaultPlace } from './types';
 import { onQuestEvent } from './channel/broadcast';
 import { controller } from './webmcp/tools';
 import { CapabilityRack } from './components/CapabilityRack';
@@ -16,18 +15,11 @@ export default function App() {
   const role = useAppState((s) => s.role);
   const activeQuestId = useAppState((s) => s.activeQuestId);
   const source = useAppState((s) => s.questSource);
+  const place = useAppState((s) => s.profile.place);
   const toastMsg = useAppState((s) => s.toast);
 
   useEffect(() => {
-    Promise.all([loadQuests(), loadWikidataQuests()]).then(([osm, wd]) => {
-      setState({
-        quests: [...osm.quests, ...wd.quests],
-        campaigns: buildCampaigns(osm.quests),
-        wdCampaigns: buildWikidataCampaigns(wd.quests),
-        questSource: osm.source,
-      });
-      controller.refresh();
-    });
+    reloadQuests().then(() => controller.refresh());
     loadContributionsFromStore();
     const unsubStore = subscribe(() => controller.refresh());
     controller.refresh();
@@ -67,7 +59,11 @@ export default function App() {
           <span>Quest</span>
         </a>
         <span className="pill pill-source" title="Where quests come from">
-          {source === 'loading' ? 'Loading places' : source === 'live' ? 'Live OpenStreetMap' : source === 'cached' ? 'OpenStreetMap, cached' : 'OpenStreetMap, offline copy'}
+          {source === 'loading' ? 'Loading places'
+            : source === 'live' ? 'Live OpenStreetMap'
+            : source === 'cached' ? 'OpenStreetMap, cached'
+            : isDefaultPlace(place) ? 'OpenStreetMap, offline copy'
+            : `OpenStreetMap unreachable for ${place.label}`}
         </span>
         <span className="spacer" />
         <a className="pill link" href={otherRole} target="_blank" rel="noreferrer">
