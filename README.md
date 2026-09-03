@@ -86,7 +86,7 @@ Before a push, the diff gets an independent review from OpenAI Codex (`codex rev
 
 ## Deploy
 
-Quest is live at https://gatherlight.netlify.app (Netlify, `netlify.toml`). The store and Survey are live at https://quest-store.quest-store.workers.dev. In Netlify → Site configuration → Environment variables, `VITE_STORE_URL` = `https://quest-store.quest-store.workers.dev` and `VITE_SURVEY_URL` = `https://quest-store.quest-store.workers.dev/` point the build at the store. GitHub Pages also works (`.github/workflows/pages.yml`, repository variables `STORE_URL` and `SURVEY_URL`).
+Quest is live at https://gatherlight.netlify.app (Netlify, `netlify.toml`). The store and Survey are live at https://quest-store.quest-store.workers.dev. In Netlify → Site configuration → Environment variables, `VITE_STORE_URL` = `https://quest-store.quest-store.workers.dev` and `VITE_SURVEY_URL` = `https://quest-store.quest-store.workers.dev/` point the build at the store.
 
 The store and Survey deploy as one Worker: `.github/workflows/worker.yml` on push, with secret `CLOUDFLARE_API_TOKEN` and variable `QUEST_URL` (`https://gatherlight.netlify.app/`). By hand:
 
