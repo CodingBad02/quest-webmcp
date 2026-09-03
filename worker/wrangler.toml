@@ -19,4 +19,4 @@ new_sqlite_classes = ["Store"]
 
 [vars]
 # Comma-separated origins allowed to call /api. Same-origin (Survey) is always allowed.
-ALLOWED_ORIGINS = "http://localhost:4173,http://localhost:5173"
+ALLOWED_ORIGINS = "https://gatherlight.netlify.app,http://localhost:4173,http://localhost:5173"

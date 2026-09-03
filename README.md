@@ -79,16 +79,16 @@ npx vite preview --port 4173 & npm run test:e2e   # real Chrome, WebMCP on, the 
 
 ## Deploy
 
-Quest deploys to GitHub Pages on push (`.github/workflows/pages.yml`). Set repository variables `STORE_URL` and `SURVEY_URL` to the Worker's URL so the build points at your store.
+Quest is live at https://gatherlight.netlify.app (Netlify, `netlify.toml`). In Netlify → Site configuration → Environment variables, set `VITE_STORE_URL` and `VITE_SURVEY_URL` to the Worker's URL so the build points at your store. GitHub Pages also works (`.github/workflows/pages.yml`, repository variables `STORE_URL` and `SURVEY_URL`).
 
-The store and Survey deploy as one Worker: `.github/workflows/worker.yml` on push, with secret `CLOUDFLARE_API_TOKEN` and variable `QUEST_URL`. By hand:
+The store and Survey deploy as one Worker: `.github/workflows/worker.yml` on push, with secret `CLOUDFLARE_API_TOKEN` and variable `QUEST_URL` (`https://gatherlight.netlify.app/`). By hand:
 
 ```
 npm run build:survey
 cd worker && npx wrangler login && npx wrangler deploy
 ```
 
-Then add Quest's origin to `ALLOWED_ORIGINS` in `worker/wrangler.toml`.
+Quest's origin is already in `ALLOWED_ORIGINS` in `worker/wrangler.toml`; add any other origin you serve Quest from.
 
 ## Design
 
