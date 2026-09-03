@@ -6,7 +6,7 @@ Turn twenty free minutes into one checked fix for your community's map. One brow
 
 Built for The WebMCP Challenge, September 2026. MIT.
 
-**Live:** Quest at https://gatherlight.netlify.app · store and partner site at https://quest-store.quest-store.workers.dev · package `@gatherlight/quest-tools` in `packages/quest-tools`.
+**Live:** Quest at https://gatherlight.netlify.app · store and partner site at https://quest-store.quest-store.workers.dev · package `@gatherlight/quest-tools` in `packages/quest-tools` · [architecture board on Excalidraw](https://link.excalidraw.com/p/readonly/lX8oa1Na6l5lssJpnOWL).
 
 ## One line
 
@@ -32,7 +32,7 @@ Runtime observations from Chrome 152 (`execute` gets one argument, unregister-du
 
 ![Architecture: volunteer and agent, five tools, three sites, package, store, data sources](docs/architecture.png)
 
-Editable source: [`docs/quest-architecture.excalidraw`](docs/quest-architecture.excalidraw).
+Editable source: [`docs/quest-architecture.excalidraw`](docs/quest-architecture.excalidraw). Live board with the full walkthrough: [Excalidraw (read-only)](https://link.excalidraw.com/p/readonly/lX8oa1Na6l5lssJpnOWL).
 
 ```
 Volunteer + agent (Chrome 149+ with WebMCP, or the ChatGPT desktop browser)
