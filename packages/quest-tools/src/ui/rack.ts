@@ -18,7 +18,7 @@ export function mountRack(container: HTMLElement, controller: QuestToolsControll
     <p class="qt-rack-runtime"></p>
     <ul class="qt-rack-list" aria-live="polite"></ul>
     <p class="qt-rack-empty" hidden></p>`;
-  container.querySelector('.qt-rack-title')!.textContent = opts.title ?? 'Tools available now';
+  container.querySelector('.qt-rack-title')!.textContent = opts.title ?? 'Agent tools';
   container.querySelector('.qt-rack-runtime')!.textContent = controller.runtime();
   const list = container.querySelector<HTMLUListElement>('.qt-rack-list')!;
   const empty = container.querySelector<HTMLParagraphElement>('.qt-rack-empty')!;

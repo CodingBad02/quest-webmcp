@@ -1,7 +1,10 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { RackItem } from '@gatherlight/quest-tools';
+import { Button } from '@/components/ui/button';
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { controller } from '../webmcp/tools';
 import { useAppState } from '../state/store';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const TAG: Partial<Record<RackItem['status'], string>> = { new: 'New', executing: 'Running' };
 
@@ -24,38 +27,38 @@ function Item({ r }: { r: RackItem }) {
   );
 }
 
-export function CapabilityRack() {
-  const [open, setOpen] = useState(false);
-  const rack = useSyncExternalStore(controller.subscribe, controller.getRack, controller.getRack);
+/** The portable rack markup (DESIGN.md §5a). qt.css owns its look; this file only decides where it sits. */
+function RackPanel({ rack }: { rack: RackItem[] }) {
   const role = useAppState((s) => s.role);
-  const count = rack.filter((r) => r.status !== 'removing' && r.status !== 'locked').length;
   const empty = rack.length === 0;
   const emptyMessage = role === 'reviewer' ? 'approve-contribution appears when something is waiting for review.' : 'No tools right now.';
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
-  }, [open]);
-
   return (
-    <>
-      <button className="rack-trigger" type="button" aria-expanded={open} aria-controls="capability-rack" onClick={() => setOpen(true)}>
-        {count} {count === 1 ? 'tool' : 'tools'} ready
-      </button>
-      <button className={`rack-backdrop ${open ? 'open' : ''}`} type="button" aria-label="Close agent tools" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)} />
-      <aside id="capability-rack" className={`qt qt-rack rack ${open ? 'rack-open' : ''}`} aria-label="Agent tools">
-        <button className="rack-close" type="button" aria-label="Close agent tools" onClick={() => setOpen(false)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-        </button>
-        <h2 className="qt-rack-title">Tools available now</h2>
-        <p className="qt-rack-runtime">{controller.runtime()}</p>
-        <ul className="qt-rack-list" aria-live="polite">
-          {rack.map((r) => <Item key={r.name} r={r} />)}
-        </ul>
-        <p className="qt-rack-empty" hidden={!empty}>{emptyMessage}</p>
-      </aside>
-    </>
+    <aside id="capability-rack" className="qt qt-rack rack" aria-label="Agent tools">
+      <h2 className="qt-rack-title">Agent tools</h2>
+      <p className="qt-rack-runtime">{controller.runtime()}</p>
+      <ul className="qt-rack-list" aria-live="polite">
+        {rack.map((r) => <Item key={r.name} r={r} />)}
+      </ul>
+      <p className="qt-rack-empty" hidden={!empty}>{emptyMessage}</p>
+    </aside>
+  );
+}
+
+export function CapabilityRack() {
+  const rack = useSyncExternalStore(controller.subscribe, controller.getRack, controller.getRack);
+  const narrow = useMediaQuery('(max-width: 899.98px)');
+  const count = rack.filter((r) => r.status !== 'removing' && r.status !== 'locked').length;
+
+  if (!narrow) return <RackPanel rack={rack} />;
+  return (
+    <Drawer>
+      <DrawerTrigger asChild>
+        <Button variant="sky" size="sm" className="fixed top-3 right-4 z-30 bg-[rgba(10,14,28,.6)] backdrop-blur-md">{count} {count === 1 ? 'tool' : 'tools'}</Button>
+      </DrawerTrigger>
+      <DrawerContent className="max-h-[80dvh]">
+        <DrawerTitle className="sr-only">Agent tools</DrawerTitle>
+        <div className="overflow-y-auto pb-[max(16px,env(safe-area-inset-bottom))]"><RackPanel rack={rack} /></div>
+      </DrawerContent>
+    </Drawer>
   );
 }

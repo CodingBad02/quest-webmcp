@@ -5,13 +5,15 @@ const NOMINATIM = { address: { country_code: 'in', state: 'Karnataka' } } as unk
 
 export function checkOpeningHours(value: string): string | null {
   const v = value.trim();
-  if (!v) return 'opening_hours: enter the hours. Example: Mo-Fr 09:00-18:00.';
+  if (!v) return 'Enter the hours. Example: Mo-Fr 09:00-18:00.';
   try {
     new OpeningHours(v, NOMINATIM, { mode: 0, locale: 'en' } as never);
     return null;
   } catch (e) {
     const msg = String(e).split('\n')[0].replace(/^Error:\s*/, '').slice(0, 120);
-    return `opening_hours: could not parse "${v}". ${msg}. Use the form "Mo-Fr 09:00-18:00; Sa 10:00-14:00".`;
+    const withDetail = `Could not read "${v}". ${msg} Use the form Mo-Fr 09:00-18:00; Sa 10:00-14:00.`;
+    if (withDetail.length <= 120) return withDetail;
+    return `Could not read "${v}". Use the form Mo-Fr 09:00-18:00; Sa 10:00-14:00.`;
   }
 }
 
@@ -19,8 +21,8 @@ export function checkOpeningHours(value: string): string | null {
 export function validate(p: Extract<ContributionPayload, { kind: 'verify-hours' }>): string[] {
   const errors: string[] = [];
   const e = checkOpeningHours(p.openingHours); if (e) errors.push(e);
-  if (!p.verifiedBy) errors.push('verified_by: choose how you checked: phone, visit, or website.');
-  if (p.note.trim().length < 10) errors.push('note: add at least 10 characters on how you confirmed the hours.');
+  if (!p.verifiedBy) errors.push('Choose how you checked.');
+  if (p.note.trim().length < 10) errors.push('Add a short note on how you confirmed the hours.');
   return errors;
 }
 
@@ -31,11 +33,10 @@ export function validateCiteClaim(p: Extract<ContributionPayload, { kind: 'cite-
   const errors: string[] = [];
   let url: URL | null = null;
   try { url = new URL(p.sourceUrl.trim()); } catch { /* not a URL */ }
-  if (!url) errors.push('source_url: enter a full URL, e.g. https://example.com/article.');
-  else if (url.protocol !== 'https:') errors.push('source_url: use an https link.');
+  if (!url || url.protocol !== 'https:') errors.push('Enter a full https link.');
   const quote = p.quote.trim();
-  if (!quote) errors.push('quote: say where the source states this, in your own words or verbatim.');
-  else if (quote.length > 300) errors.push('quote: keep it under 300 characters.');
-  if (!p.confirmed) errors.push('confirmed: check the box once you have read the source and it states this value.');
+  if (!quote) errors.push('Say where the source states this.');
+  else if (quote.length > 300) errors.push('Keep it under 300 characters.');
+  if (!p.confirmed) errors.push('Tick the box once you have read the source.');
   return errors;
 }

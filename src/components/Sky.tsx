@@ -1,15 +1,17 @@
 /**
  * The sky. Real places rendered as stars, one per quest: an outlined ring on approval, filled with
- * a halo once landed (DESIGN.md §8). WebGL when the browser has it and the person has not asked for
- * reduced motion; otherwise the static SVG constellation in the same container. Both set
- * data-approved / data-landed counts on the root.
+ * a halo once landed. A slow spiral galaxy sits far behind them on the landing. WebGL when the
+ * browser has it and the person has not asked for reduced motion; otherwise the static SVG
+ * constellation in the same container. Both set data-approved / data-landed counts on the root.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppState } from '../state/store';
+import { setState, useAppState } from '../state/store';
 import { ConstellationStatic } from './Constellation';
+import { IntentBar } from './IntentBar';
 import { StateChip } from './StateChip';
 import { buildSkyModel, placeStars, starTiers, type SkyMode, type StarTier } from './skyLayout';
 import type { SkyHandle } from './skyScene';
+import './sky.css';
 
 type Path = 'webgl' | 'svg';
 
@@ -36,11 +38,18 @@ function announce(path: Path) {
 
 interface Hover { index: number; x: number; y: number }
 
+const STEPS: [string, string][] = [
+  ['Find', 'Your agent finds a gap that fits your time.'],
+  ['Do', 'You call, visit, or read. Then check the form.'],
+  ['Star', 'A neighbour approves it. Your star lights.'],
+];
+
 export function Sky({ size }: { size: SkyMode }) {
   const campaigns = useAppState((s) => s.campaigns);
   const quests = useAppState((s) => s.quests);
   const contributions = useAppState((s) => s.contributions);
   const place = useAppState((s) => s.profile.place);
+  const spotlight = useAppState((s) => s.spotlightQuestId);
   const model = useMemo(() => buildSkyModel(campaigns, quests, place), [campaigns, quests, place]);
   const tiers = useMemo(() => starTiers(contributions), [contributions]);
   const tierById = useMemo(() => {
@@ -62,7 +71,6 @@ export function Sky({ size }: { size: SkyMode }) {
 
   const layout = useMemo(() => (dims.w && dims.h ? placeStars(model, dims.w, dims.h, size) : null), [model, dims, size]);
 
-  // Size.
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -74,7 +82,6 @@ export function Sky({ size }: { size: SkyMode }) {
     return () => ro.disconnect();
   }, []);
 
-  // WebGL scene lifecycle.
   useEffect(() => {
     if (path !== 'webgl') { announce('svg'); return; }
     let cancelled = false;
@@ -98,7 +105,6 @@ export function Sky({ size }: { size: SkyMode }) {
     };
   }, [path]);
 
-  // Layout into the scene.
   useEffect(() => {
     const h = handleRef.current;
     if (!ready || !h || !layout) return;
@@ -114,6 +120,18 @@ export function Sky({ size }: { size: SkyMode }) {
     firstPaint.current = false;
   }, [ready, tierById]);
 
+  // "See your star": re-run one star's ignition after the hero re-expands, then forget the request.
+  useEffect(() => {
+    const h = handleRef.current;
+    if (!spotlight || !ready || !h || size !== 'hero' || !layout) return;
+    const dimmed = new Map(tierById);
+    dimmed.delete(spotlight);
+    h.setLit(dimmed, false);
+    const t = setTimeout(() => h.setLit(tierById, true), 350);
+    setState({ spotlightQuestId: null });
+    return () => clearTimeout(t);
+  }, [spotlight, ready, size, layout, tierById]);
+
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const h = handleRef.current;
     if (!h || !rootRef.current) return;
@@ -128,6 +146,7 @@ export function Sky({ size }: { size: SkyMode }) {
   const hoverStar = hover && layout ? layout.stars[hover.index] : null;
   const hoverTier = hoverStar ? tiers.get(hoverStar.questId) : undefined;
   const tipX = hover && dims.w ? Math.min(Math.max(hover.x, 110), dims.w - 110) : 0;
+  const hero = size === 'hero';
 
   return (
     <div ref={rootRef} className={`sky-root sky-${size} sky-path-${path}`} data-approved={approvedCount} data-landed={landedCount} onPointerMove={path === 'webgl' ? onMove : undefined} onPointerLeave={path === 'webgl' ? onLeave : undefined}>
@@ -137,33 +156,49 @@ export function Sky({ size }: { size: SkyMode }) {
         <ConstellationStatic layout={layout} tiers={tiers} w={dims.w} h={dims.h} onHover={(index, x, y) => setHover(index === -1 ? null : { index, x, y })} />
       ) : null}
 
-      {size === 'hero' && (
-        <div className="sky-copy">
-          <h1 className="sky-headline">Twenty minutes. One&nbsp;real&nbsp;fix.</h1>
-          <p className="sky-lede">Your browser agent finds the gap. You make the call or take the photo.</p>
+      {hero && (
+        <div className="sky-copy pointer-events-none absolute inset-x-0 top-0 flex min-h-[100svh] flex-col justify-center gap-7 px-(--gutter) pt-24 pb-44 max-md:pb-52">
+          <div className="grid gap-4">
+            <h1 className="hero-in font-display text-balance text-[clamp(44px,5.4vw,84px)] leading-[1.0] font-light tracking-[-.025em] text-sky-ink [font-variation-settings:'opsz'_144] [text-shadow:0_2px_28px_rgba(7,9,18,.7)]" style={{ '--d': '0ms' } as React.CSSProperties}>
+              Twenty minutes.<br />One more star.
+            </h1>
+            <p className="hero-in max-w-[52ch] text-[17px] leading-[1.55] text-sky-muted [text-shadow:0_1px_18px_rgba(7,9,18,.8)] max-md:text-[15px]" style={{ '--d': '90ms' } as React.CSSProperties}>
+              Pick a small gap near you. Your browser agent lines up the steps. You do the work. A neighbour checks it. Your city's map gets one more star.
+            </p>
+          </div>
+          <div className="hero-in" style={{ '--d': '180ms' } as React.CSSProperties}><IntentBar /></div>
         </div>
       )}
 
-      {model.panels.length > 0 && (
-        <div className="sky-foot">
-          <ul className="sky-key" aria-label="What a star means">
-            <li><StateChip state="available" /></li>
-            <li><StateChip state="approved" /></li>
-            <li><StateChip state="landed" /></li>
-          </ul>
-          <ol className="sky-legend" aria-label="Campaigns" style={{ gridTemplateColumns: `repeat(${model.panels.length}, minmax(0, 1fr))` }}>
+      <div className="sky-foot pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-x-10 gap-y-4 px-(--gutter) pb-6 max-md:pb-4">
+        {hero ? (
+          <ol className="hero-in flex flex-wrap gap-x-9 gap-y-3 text-[13px] leading-[18px] text-sky-muted" style={{ '--d': '300ms' } as React.CSSProperties} aria-label="How it works">
+            {STEPS.map(([name, body], i) => (
+              <li key={name} className="flex max-w-[24ch] gap-2.5">
+                <span className="font-mono text-[11px] tabular-nums text-gold/80 pt-px">0{i + 1}</span>
+                <span><strong className="font-medium text-sky-ink">{name}</strong><span className="max-md:hidden"> · {body}</span></span>
+              </li>
+            ))}
+          </ol>
+        ) : <span />}
+        {model.panels.length > 0 && (
+          <ul className="sky-legend m-0 flex flex-wrap items-center gap-x-5 gap-y-2 p-0 text-[13px] leading-[18px]" aria-label="What a star means">
+            <li className="flex gap-4 [&_.state-chip]:text-sky-muted [&_.state-chip-glyph]:text-gold [&_.state-chip-label]:text-[12px]">
+              <StateChip state="available" /><StateChip state="approved" /><StateChip state="landed" />
+            </li>
+            <li aria-hidden="true" className="hidden h-3 w-px bg-sky-line sm:block" />
             {model.panels.map((p) => {
               const litHere = p.starIndices.filter((i) => tierById.has(model.stars[i].questId)).length;
               return (
-                <li key={p.campaignId}>
-                  <span className="sky-legend-name">{p.name}</span>
-                  <span className="sky-legend-count">{litHere} / {p.starIndices.length}</span>
+                <li key={p.campaignId} className="flex items-baseline gap-2">
+                  <span className="sky-legend-name font-medium text-sky-ink">{p.name}</span>
+                  <span className="sky-legend-count font-mono text-[12px] tabular-nums text-sky-muted">{litHere} / {p.starIndices.length}</span>
                 </li>
               );
             })}
-          </ol>
-        </div>
-      )}
+          </ul>
+        )}
+      </div>
 
       {hoverStar && (
         <div className="sky-tip" role="tooltip" style={{ left: tipX, top: hover!.y }}>

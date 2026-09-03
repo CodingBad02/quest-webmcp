@@ -78,13 +78,13 @@ let names = await toolNames(vol);
 check('1. Fresh load registers find-quests and open-quest only', JSON.stringify(names) === JSON.stringify(['find-quests', 'open-quest']), names.join(','));
 check('2. Rack matches registered tools', JSON.stringify(await rackNames(vol)) === JSON.stringify(names), (await rackNames(vol)).join(','));
 
-await vol.fill('#name', 'Priya');
 const found = await call(vol, 'find-quests', { minutesAvailable: 20, skills: ['phone'], type: 'verify-hours' });
 check('3. find-quests returns a ranked list under 1500 chars', found.startsWith('Found') && found.length < 1500, found.split('\n')[1]?.slice(0, 80));
 const id = found.match(/id=(\S+)/)?.[1];
 
 const opened = await call(vol, 'open-quest', { id });
 await vol.waitForSelector('.workspace');
+await vol.fill('#name', 'Priya');
 names = await toolNames(vol);
 check('4. open-quest adds check-contribution', names.includes('check-contribution') && !names.includes('submit-contribution'), opened.slice(0, 60));
 const openedEnvelope = envelope(opened);
@@ -92,7 +92,7 @@ check('4b. open-quest machine line reports state open with a questId', openedEnv
 await vol.screenshot({ path: `${SHOTS}/02-workspace.png` });
 
 const notReady = await call(vol, 'check-contribution');
-check('5. check on an empty form returns actionable errors', notReady.startsWith('Not ready') && /opening_hours/.test(notReady), notReady.split('\n')[1]);
+check('5. check on an empty form returns actionable errors', notReady.startsWith('Not ready') && /Enter the hours/.test(notReady), notReady.split('\n')[1]);
 
 // Human does the work.
 await vol.fill('#oh', 'Mo-Sa 09:00-21:00; Su 10:00-18:00');
@@ -180,10 +180,10 @@ const surveyTools = await toolNames(survey);
 check('11a. Survey lists check-contribution only (submit locked until checked)', JSON.stringify(surveyTools) === JSON.stringify(['check-contribution']), surveyTools.join(','));
 const handoffVisible = await survey.isVisible('.qt-handoff');
 const handoffText = await survey.$eval('#handoff-text', (e) => e.textContent).catch(() => '');
-check('11b. .qt-handoff is visible with "Carried from Quest"', handoffVisible && /Carried from Quest/.test(handoffText ?? ''), handoffText ?? '(missing)');
+check('11b. .qt-handoff is visible with "From Quest"', handoffVisible && /From Quest/.test(handoffText ?? ''), handoffText ?? '(missing)');
 
 const invalidSurvey = await call(survey, 'check-contribution');
-check('12a. check-contribution on the empty Survey form reports the two missing fields', invalidSurvey.startsWith('Not ready') && /wheelchair/.test(invalidSurvey) && /photo/.test(invalidSurvey), invalidSurvey.split('\n').slice(0, 3).join(' | '));
+check('12a. check-contribution on the empty Survey form reports the two missing fields', invalidSurvey.startsWith('Not ready') && /Choose yes, limited, or no/.test(invalidSurvey) && /Add one photo of the entrance/.test(invalidSurvey), invalidSurvey.split('\n').slice(0, 3).join(' | '));
 
 await survey.selectOption('#wheelchair', 'yes');
 await survey.setInputFiles('#photo', PNG_PATH);
@@ -264,7 +264,7 @@ const openedCiteEnvelope = envelope(openedCite);
 check('17. open-quest opens the cite-claim workspace', openedCiteEnvelope.state === 'open' && openedCiteEnvelope.questId === citeId, JSON.stringify(openedCiteEnvelope));
 
 const invalidCite = await call(vol, 'check-contribution');
-check('18. check-contribution on the empty cite-claim form reports three errors', invalidCite.startsWith('Not ready') && /source_url/.test(invalidCite) && /quote/.test(invalidCite) && /confirmed/.test(invalidCite), invalidCite.split('\n').slice(0, 4).join(' | '));
+check('18. check-contribution on the empty cite-claim form reports three errors', invalidCite.startsWith('Not ready') && /Enter a full https link/.test(invalidCite) && /Say where the source states this/.test(invalidCite) && /Tick the box/.test(invalidCite), invalidCite.split('\n').slice(0, 4).join(' | '));
 
 await vol.fill('#sourceUrl', 'https://example.com/');
 await vol.fill('#quote', 'The page states the figure clearly in its history section.');

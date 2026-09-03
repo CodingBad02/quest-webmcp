@@ -1,345 +1,49 @@
-/* qt.css (DESIGN.md §2) ships the portable rack/dialog tokens and their component styles.
- * It must load first so Quest's own skin below can win the cascade. */
-@import '@gatherlight/quest-tools/qt.css';
+/* What Tailwind does not express well: SVG state classes, one glyph color map, two keyframes.
+   Tokens, layout, and components live in index.css and the JSX. */
 
-:root {
-  /* Paper. Warm and quiet so the cold indigo sky above it reads as a different world. */
-  --bg: #f5f4ef; --surface: #ffffff; --surface-2: #f0efe9; --surface-3: #e6e5de; --text: #1a1a18; --muted: #5d5d58; --border: #dcdbd3;
-  --accent: #2f6f4f; --accent-ink: #ffffff; --info: #3b475e; --warn: #8f6a24; --danger: #b3261e;
-  --star-lit: #ffd166;
-  /* The sky is one night surface in both themes. Text on it is tinted from the sky hue, not grey. */
-  --sky: #0a0e1c; --sky-top: #070912; --sky-ink: #eef1f8; --sky-muted: #a6afc8; --sky-line: rgba(238,241,248,.1); --sky-fill: rgba(238,241,248,.07);
-  --shadow: 0 1px 2px rgba(20,22,30,.07), 0 1px 1px rgba(20,22,30,.04);
-  --shadow-dialog: 0 28px 70px -16px rgba(7,9,18,.5), 0 4px 14px -4px rgba(7,9,18,.2);
-  --dialog-border: transparent;
-  --r-s: 6px; --r-m: 10px; --r-l: 12px;
-  --gutter: max(24px, calc((100vw - 1200px) / 2));
-  --serif: Fraunces, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --ease-out: cubic-bezier(.2,.8,.2,1); --ease-in: cubic-bezier(.6,0,.8,.2);
-  color-scheme: light dark;
-  interpolate-size: allow-keywords;
-}
-
-/* Quest's skin, mapped onto the portable --qt-* contract (DESIGN.md §3). Only two overrides:
- * the page-level background (warm paper — the rack itself stays on the neutral default surface)
- * and the interface font. Everything else keeps qt.css's system defaults.
- * qt.css declares its tokens directly on `.qt` (not inherited from :root), so the override has to
- * repeat on `.qt` to actually reach the rack and dialog, not just on `:root` for the rest of the page. */
-:root, .qt {
-  --qt-color-bg: var(--bg);
-  --qt-font-ui: var(--sans);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #111216; --surface: #191a1f; --surface-2: #21222a; --surface-3: #2a2b34; --text: #ecedf1; --muted: #a9adb8; --border: #2c2e37;
-    --accent: #6fcf97; --accent-ink: #0d1f16; --info: #b3bccf; --warn: #d8b25c; --danger: #f2867a;
-    --shadow: none; --shadow-dialog: none; --dialog-border: var(--border); }
-
-  /* Every --qt-color-* token remapped for dark (DESIGN.md §3, §13). See DESIGN.md §3's
-   * "Dark token values (Quest)" table for the values below. */
-  :root, .qt {
-    --qt-color-bg: var(--bg);
-    --qt-color-surface: var(--surface);
-    --qt-color-surface-2: var(--surface-2);
-    --qt-color-surface-3: var(--surface-3);
-    --qt-color-border: var(--border);
-    --qt-color-text: var(--text);
-    --qt-color-text-muted: var(--muted);
-    --qt-color-accent: var(--accent);
-    --qt-color-accent-ink: var(--accent-ink);
-    --qt-color-info: var(--info);
-    --qt-color-warn: var(--warn);
-    --qt-color-danger: var(--danger);
-    --qt-color-focus: var(--accent);
-  }
-}
-
-* { box-sizing: border-box; }
-html { background: var(--bg); }
-html, body { margin: 0; color: var(--text); font: 16px/1.5 var(--sans); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; caret-color: var(--accent); }
-body { min-width: 320px; min-height: 100vh; background: var(--bg); }
-::selection { background: color-mix(in srgb, var(--star-lit) 45%, transparent); }
-h1 { font-family: var(--serif); font-size: 34px; line-height: 1.1; font-weight: 500; margin: 0 0 8px; letter-spacing: -.02em; text-wrap: balance; font-variation-settings: "opsz" 48; }
-h2 { font-family: var(--serif); font-size: 23px; line-height: 1.2; font-weight: 500; margin: 0 0 8px; letter-spacing: -.015em; text-wrap: balance; font-variation-settings: "opsz" 24; }
-p { margin: 0 0 8px; }
-a { color: var(--text); text-underline-offset: 3px; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, var(--muted) 55%, transparent); transition: text-decoration-color 160ms var(--ease-out); }
-a:hover { text-decoration-color: currentColor; }
-code { font-family: var(--mono); font-size: .92em; }
-button, input, select, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-
-/* ---------- Shell ---------- */
-.app { min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
-.topbar { height: 56px; display: flex; align-items: center; gap: 10px; padding-inline: var(--gutter); background: var(--sky-top); color: var(--sky-ink); }
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 600; color: var(--sky-ink); text-decoration: none; font-size: 17px; letter-spacing: -.012em; }
-.brand svg { color: var(--star-lit); }
-.spacer { flex: 1; }
-/* One neutral pill, no ad hoc color variants (DESIGN.md §0, §7): where quests come from and the
- * runtime line are both informational, never a warning. */
-.pill { display: inline-flex; align-items: center; min-height: 30px; font-size: 13px; line-height: 1.3; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sky-line); color: var(--sky-muted); background: transparent; white-space: nowrap; text-decoration: none; font-weight: 500; font-variant-numeric: tabular-nums; transition: color 180ms var(--ease-out), background 180ms var(--ease-out), border-color 180ms var(--ease-out); }
-.pill.link { color: var(--sky-ink); border-color: rgba(238,241,248,.22); }
-.pill.link:hover { background: var(--sky-fill); border-color: rgba(238,241,248,.4); }
-
-/* ---------- The sky ---------- */
-.sky-root { position: relative; isolation: isolate; overflow: hidden; background: var(--sky); color: var(--sky-ink); border-bottom: 1px solid var(--sky-line); }
-.sky-hero { height: 52vh; min-height: 380px; }
-.sky-band { height: 140px; }
-.sky-canvas, .sky-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.sky-svg svg { display: block; width: 100%; height: 100%; }
-.sky-svg .edge { stroke: rgba(238,241,248,.12); stroke-width: 1; }
-.sky-svg .edge.on { stroke: rgba(255,209,102,.55); stroke-width: 1; }
-.sky-svg .star .core { fill: rgba(219,227,248,.62); }
-.sky-svg .star.landed .core { fill: var(--star-lit); }
-.sky-svg .star.approved .core.ring { fill: none; stroke: var(--star-lit); stroke-width: 2; }
-.sky-svg .star .halo { fill: var(--star-lit); opacity: .55; }
-.star-hit { position: absolute; z-index: 1; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; transform: translate(-50%, -50%); cursor: default; }
-.star-hit:focus-visible { outline-color: var(--star-lit); outline-offset: -12px; }
-
-.sky-copy { position: absolute; top: 0; left: 0; right: 0; padding: clamp(28px, 6.5vh, 60px) var(--gutter) 0; pointer-events: none; }
-.sky-headline { font-family: var(--serif); font-variation-settings: "opsz" 144; font-weight: 400; font-size: clamp(38px, 3.9vw, 60px); line-height: 1.02; letter-spacing: -.022em; margin: 0 0 16px; max-width: 15ch; text-wrap: balance; color: var(--sky-ink); text-shadow: 0 2px 28px rgba(7,9,18,.7); }
-.sky-lede { font-size: 17px; line-height: 1.5; color: var(--sky-muted); max-width: 50ch; margin: 0; text-shadow: 0 1px 18px rgba(7,9,18,.8); }
-
-.sky-foot { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 0 var(--gutter) 20px; display: grid; gap: 12px; pointer-events: none; }
-.sky-band .sky-foot { padding-bottom: 12px; }
-.sky-legend { margin: 0; padding: 0; list-style: none; display: grid; gap: 40px; }
-.sky-legend li { display: flex; gap: 10px; align-items: baseline; min-width: 0; font-size: 13px; line-height: 18px; }
-.sky-legend-name { color: var(--sky-ink); font-weight: 500; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.sky-legend-count { flex: none; color: var(--sky-muted); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
-
-/* What a star means (DESIGN.md §4, §8): the chip's circle family, gold instead of accent. */
-.sky-key { margin: 0; padding: 0; list-style: none; display: flex; gap: 20px; }
-.sky-band .sky-key { display: none; }
-.sky-key .state-chip { color: var(--sky-muted); }
-.sky-key .state-chip-glyph { --sc-color: var(--star-lit); color: var(--star-lit); }
-.sky-key .state-chip-label { font-size: 12px; }
-
-.sky-tip { position: absolute; z-index: 2; transform: translate(-50%, calc(-100% - 16px)); display: grid; gap: 2px; max-width: 260px; padding: 9px 13px; border-radius: 8px; background: rgba(12,17,34,.94); border: 1px solid rgba(238,241,248,.14); box-shadow: 0 12px 32px -10px rgba(7,9,18,.7); font-size: 13px; line-height: 1.4; color: var(--sky-muted); pointer-events: none; animation: fade 140ms var(--ease-out); }
-.sky-tip strong { color: var(--sky-ink); font-weight: 500; }
-.sky-tip span { white-space: nowrap; }
-@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-
-/* ---------- Layout (DESIGN.md §12) ---------- */
-.layout { width: 100%; flex: 1; display: grid; grid-template-columns: minmax(680px, 760px) 320px; gap: 24px; padding: 36px 24px 72px; justify-content: center; align-items: start; }
-.work { min-width: 0; }
-@media (max-width: 1280px) { .layout { grid-template-columns: minmax(560px, 1fr) 280px; } }
-@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .rack-col { order: 2; } }
-
-.section-head { margin-bottom: 24px; }
-.section-head .muted { max-width: 68ch; }
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
-.empty { padding: 40px 28px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: var(--r-l); background: color-mix(in srgb, var(--surface) 72%, transparent); }
-
-/* ---------- Profile ---------- */
-.profile { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: dense; gap: 16px 18px; padding: 20px; margin-bottom: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
-.profile .field { margin: 0; }
-.profile .field.chips { grid-column: 1 / -1; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
-.profile .field.chips legend { float: left; padding: 0; margin: 0 8px 0 0; }
-.profile .field.near { grid-column: 1 / -1; }
-.near-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.near-row input { flex: 1 1 220px; min-width: 160px; }
-.near-row .btn.small { margin-left: 0; flex: 0 0 auto; }
-.field { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
-.field.inline { flex-direction: row; align-items: center; gap: 12px; }
-.field label, .field legend { font-size: 14px; color: var(--muted); font-weight: 500; }
-input:not([type=checkbox]):not([type=radio]):not([type=file]), select, textarea { min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-s); background: var(--surface); transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background 180ms var(--ease-out); }
-input:not([type=checkbox]):not([type=radio]):not([type=file]):hover, select:hover, textarea:hover { border-color: color-mix(in srgb, var(--muted) 55%, var(--border)); }
-input:not([type=checkbox]):not([type=radio]):not([type=file]):focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
-input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
-textarea { resize: vertical; }
-.chips, .radios, .presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.chip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 13px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 14px; line-height: 1.3; transition: color 180ms var(--ease-out), background 180ms var(--ease-out), border-color 180ms var(--ease-out), transform 180ms var(--ease-out); position: relative; }
-.chip:hover { background: var(--surface-2); }
-.chip:active { transform: scale(.98); }
-.chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: color-mix(in srgb, var(--accent) 85%, var(--text)); font-weight: 500; }
-.chip input { position: absolute; opacity: 0; width: 0; height: 0; }
-.chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-.presets { margin-bottom: 12px; }
-
-/* ---------- Quest cards ---------- */
-.cards { list-style: none; padding: 0; margin: 0; display: grid; grid-auto-flow: dense; gap: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
-.cards li + li { border-top: 1px solid var(--border); }
-.card { width: 100%; min-height: 92px; text-align: left; display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(180px, auto); grid-template-rows: auto auto; column-gap: 16px; row-gap: 3px; align-items: center; padding: 18px 20px; background: var(--surface); border: 0; border-radius: 0; cursor: pointer; color: inherit; transition: background 220ms var(--ease-out), transform 220ms var(--ease-out); }
-.card:hover { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
-.card:active { transform: scale(.995); }
-.card-glyph { grid-column: 1; grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: var(--r-m); display: grid; place-items: center; color: var(--text); background: var(--surface-2); transition: transform 420ms var(--ease-out), background 220ms var(--ease-out); }
-.card:hover .card-glyph { transform: scale(1.06); background: var(--surface-3); }
-.card-glyph svg { width: 18px; height: 18px; }
-.card-title { grid-column: 2; grid-row: 2; font-size: 17px; line-height: 1.3; letter-spacing: -.012em; font-weight: 600; }
-.card-meta { grid-column: 3; grid-row: 1 / span 2; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; max-width: 280px; }
-.card .kind { grid-column: 2; grid-row: 1; }
-.kind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.3; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.kind svg { width: 13px; height: 13px; }
-
-.mine { margin-top: 40px; }
-.questlist > .small { margin-top: 10px; }
-.mine ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-.mine-item { font-size: 14px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.btn.small { min-height: 28px; padding: 3px 10px; font-size: 13px; margin-left: auto; }
-/* DESIGN.md §7: a return receipt from a partner site gets a small muted mono tag. */
-.via-tag { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-
-/* ---------- State chip (DESIGN.md §4): one glyph + label for the ten envelope states.
-   Not part of qt.css — this is Quest's own component, built from the same --qt-* tokens
-   (with light-mode fallbacks) so a state looks identical everywhere a volunteer sees it. ---------- */
+/* ---------- State chip: one glyph + label for the ten envelope states ---------- */
 .state-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--sc-color); white-space: nowrap; }
 .state-chip-glyph { flex: none; display: block; color: var(--sc-color); }
-.state-chip[data-state="available"] { --sc-color: var(--qt-color-text-muted, #5B5B57); }
-.state-chip[data-state="open"] { --sc-color: var(--qt-color-info, #2A5C99); }
-.state-chip[data-state="checked"] { --sc-color: var(--qt-color-accent, #2F6F4F); }
-.state-chip[data-state="submitted"] { --sc-color: var(--qt-color-info, #2A5C99); }
-.state-chip[data-state="approved"] { --sc-color: var(--qt-color-accent, #2F6F4F); }
-.state-chip[data-state="landed"] { --sc-color: var(--qt-color-gold, #FFD166); }
-.state-chip[data-state="invalid"] { --sc-color: var(--qt-color-danger, #B3261E); }
-.state-chip[data-state="declined"] { --sc-color: var(--qt-color-warn, #B45309); }
-.state-chip[data-state="rejected"] { --sc-color: var(--qt-color-danger, #B3261E); }
-.state-chip[data-state="stale"] { --sc-color: var(--qt-color-warn, #B45309); }
-/* One pulse, 400ms, ease-out — the volunteer's own latest contribution (DESIGN.md §4). */
-.state-chip-pulse { animation: chip-pulse 400ms var(--qt-ease-out, cubic-bezier(.2,.8,.2,1)); }
+.state-chip[data-state="available"] { --sc-color: var(--muted-foreground); }
+.state-chip[data-state="open"] { --sc-color: var(--info); }
+.state-chip[data-state="checked"] { --sc-color: var(--primary); }
+.state-chip[data-state="submitted"] { --sc-color: var(--info); }
+.state-chip[data-state="approved"] { --sc-color: var(--primary); }
+.state-chip[data-state="landed"] { --sc-color: var(--gold); }
+.state-chip[data-state="invalid"] { --sc-color: var(--destructive); }
+.state-chip[data-state="declined"] { --sc-color: var(--warn); }
+.state-chip[data-state="rejected"] { --sc-color: var(--destructive); }
+.state-chip[data-state="stale"] { --sc-color: var(--warn); }
+.state-chip-pulse { animation: chip-pulse 400ms var(--ease-out); }
 @keyframes chip-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 
-/* ---------- Workspace ---------- */
-.workspace, .queue { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l); box-shadow: var(--shadow); }
-.workspace .back { display: inline-flex; align-items: center; min-height: 36px; gap: 6px; background: none; border: 0; color: var(--muted); padding: 0; margin: -6px 0 16px; cursor: pointer; font-size: 15px; }
-.workspace .back:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
-.workspace .section-head .muted { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 15px; }
-.workspace .section-head .muted > * + *::before { content: "\B7"; display: inline-block; margin-right: 8px; color: var(--muted); text-decoration: none; }
-.steps { list-style: none; display: flex; align-items: center; padding: 18px 20px; margin: 0 0 28px; font-size: 13px; color: var(--muted); background: var(--surface-2); border-radius: var(--r-m); }
+/* ---------- Workspace step rail: the connector hairlines ---------- */
 .step { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .step + .step { flex: 1; }
-.step + .step::before { content: ""; flex: 1; height: 1px; min-width: 20px; margin: 0 12px; background: var(--border); transition: background 240ms var(--ease-out); }
-.step-dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--border); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); background: var(--surface); transition: background 240ms var(--ease-out), border-color 240ms, color 240ms; }
-.step-dot svg { width: 12px; height: 12px; }
-.step.on .step-dot { border-color: var(--text); color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 10%, transparent); }
-.step.on .step-label { color: var(--text); font-weight: 600; }
-.step.done .step-dot { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.step.done .step-label { color: var(--text); }
-.step.done::before, .step.on::before { background: var(--accent); }
-.form { border: 0; padding: 0; margin: 0; }
-.form:disabled { opacity: .72; }
-.help { color: var(--muted); font-size: 14px; line-height: 1.55; margin-bottom: 14px; max-width: 70ch; }
-/* DESIGN.md §7: Survey owns the access-photo form. Quest hands the volunteer a link and a clock. */
-.handoff-card { display: grid; gap: 14px; align-items: start; max-width: 60ch; }
-.handoff-card .btn { justify-self: start; }
-.handoff-countdown { margin: 0; font-size: 14px; color: var(--muted); }
-.handoff-countdown .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--text); font-weight: 500; }
-.preview { display: block; max-width: 320px; max-height: 240px; border-radius: var(--r-s); margin-top: 8px; border: 1px solid var(--border); }
-.errors { margin: 0 0 14px; padding: 12px 16px 12px 32px; border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); border-radius: var(--r-s); color: var(--danger); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); font-size: 14px; line-height: 1.5; }
-.errors li + li { margin-top: 4px; }
-.actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-.actions .grow { flex: 1; min-width: 180px; }
-.btn { min-height: 44px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 15px; font-weight: 500; line-height: 1.3; transition: color 220ms var(--ease-out), background 220ms var(--ease-out), border-color 220ms var(--ease-out), transform 220ms var(--ease-out); }
-.btn:hover { background: var(--surface-2); border-color: color-mix(in srgb, var(--muted) 45%, var(--border)); }
-.btn:active { transform: scale(.98); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); border-color: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+.step + .step::before { content: ""; flex: 1; height: 1px; min-width: 16px; margin: 0 12px; background: var(--border); transition: background 240ms var(--ease-out); }
+.step-dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--border); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted-foreground); background: var(--card); transition: background 240ms var(--ease-out), border-color 240ms, color 240ms; }
+.step.on .step-dot { border-color: var(--foreground); color: var(--foreground); box-shadow: 0 0 0 3px color-mix(in srgb, var(--foreground) 10%, transparent); }
+.step.on .step-label { color: var(--foreground); font-weight: 600; }
+.step.done .step-dot { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.step.done .step-label { color: var(--foreground); }
+.step.done::before, .step.on::before { background: var(--primary); }
+@media (max-width: 639.98px) { .step + .step::before { margin-inline: 8px; } .step-label { font-size: 12px; } }
 
-.check-row { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; }
-.check-row input { margin: 0; accent-color: var(--accent); }
-
-/* ---------- Knowledge graph (DESIGN.md §8): the Wikidata sibling to the sky. Entities in two
-   deterministic rows, one edge per claim to a small terminal mark standing for its source. A
-   quiet editorial section on the paper surface — a hairline rule, not a card — so it reads as a
-   map of sources, not a form. */
-.kg { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--border); }
-.kg-caption { margin: 2px 0 0; font-family: var(--mono); font-size: 13px; color: var(--muted); }
-.kg-key { margin: 18px 0 4px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; }
-.kg-key li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.kg-key-swatch[data-state="none"] { fill: none; stroke: var(--muted); stroke-width: 1; }
-.kg-key-swatch[data-state="approved"] { fill: none; stroke: var(--star-lit); stroke-width: 1.5; stroke-dasharray: 3 2; }
-.kg-key-swatch[data-state="landed"] { fill: var(--star-lit); stroke: var(--star-lit); }
+/* ---------- Knowledge graph: SVG marks by class and state ---------- */
+.kg-key { margin: 14px 0 4px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.kg-key li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
+.kg-key-swatch[data-state="none"] { fill: none; stroke: var(--muted-foreground); stroke-width: 1; }
+.kg-key-swatch[data-state="approved"] { fill: none; stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.kg-key-swatch[data-state="landed"] { fill: var(--gold); stroke: var(--gold); }
 .kg-svg { display: block; width: 100%; height: auto; margin-top: 8px; }
 @media (max-width: 640px) { .kg { overflow-x: auto; } .kg-svg { min-width: 640px; } }
-.kg-node { fill: var(--surface); stroke: var(--muted); stroke-width: 1.25; }
-.kg-label { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+.kg-node { fill: var(--card); stroke: var(--muted-foreground); stroke-width: 1.25; }
+.kg-label { font-family: var(--font-sans); font-size: 12px; fill: var(--muted-foreground); }
 .kg-edge { stroke: var(--border); stroke-width: 1; }
-.kg-terminal { fill: none; stroke: var(--muted); stroke-width: 1; transform-box: fill-box; transform-origin: center; }
-.kg-claim[data-state="approved"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.75; stroke-dasharray: 5 4; }
-.kg-claim[data-state="approved"] .kg-terminal { stroke: var(--star-lit); stroke-width: 1.75; }
-.kg-claim[data-state="landed"] .kg-edge { stroke: var(--star-lit); stroke-width: 1.75; }
-.kg-claim[data-state="landed"] .kg-terminal { stroke: var(--star-lit); fill: var(--star-lit); }
+.kg-terminal { fill: none; stroke: var(--muted-foreground); stroke-width: 1; transform-box: fill-box; transform-origin: center; }
+.kg-claim[data-state="approved"] .kg-edge { stroke: var(--gold); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.kg-claim[data-state="approved"] .kg-terminal { stroke: var(--gold); stroke-width: 1.75; }
+.kg-claim[data-state="landed"] .kg-edge { stroke: var(--gold); stroke-width: 1.75; }
+.kg-claim[data-state="landed"] .kg-terminal { stroke: var(--gold); fill: var(--gold); }
 .kg-claim-pulse .kg-terminal { animation: kg-pulse 500ms var(--ease-out); }
 @keyframes kg-pulse { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-/* ---------- Capability rack: Quest's layout wrapper around the portable .qt-rack (qt.css owns
-   the machine-panel look itself — background, border, row states, timings; DESIGN.md §2, §5).
-   `.qt-rack.rack` matches qt.css's own `.qt.qt-rack` specificity so this position override wins. */
-.qt-rack.rack { position: sticky; top: 24px; }
-.rack-trigger, .rack-backdrop, .rack-close { display: none; }
-
-/* ---------- Reviewer ---------- */
-.reviews { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
-.review { padding: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-m); }
-.review-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.review-head strong { font-size: 17px; letter-spacing: -.012em; }
-.review-head .muted { font-size: 14px; }
-.review dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 8px 0; font-size: 15px; }
-.review dt { color: var(--muted); }
-.review dd { margin: 0; }
-.checklist { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 6px; font-size: 14px; }
-.checklist label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.checklist input { margin: 0; accent-color: var(--accent); }
-
-/* The confirmation dialog is `.qt.qt-confirm` (qt.css); its markup and copy live in
-   @gatherlight/quest-tools's createDialogConfirm per DESIGN.md §5a, §6. Nothing Quest-specific to add here. */
-@keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
-
-/* ---------- Toast ---------- */
-.toast-region { position: fixed; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; pointer-events: none; z-index: 10; }
-.toast { pointer-events: auto; background: var(--sky-top); color: var(--sky-ink); border: 1px solid var(--sky-line); padding: 10px 18px; border-radius: 999px; font-size: 14px; line-height: 1.4; font-weight: 500; box-shadow: 0 10px 30px -8px rgba(7,9,18,.45); animation: rise 240ms var(--ease-out); max-width: 90vw; }
-
-/* ---------- Reduced motion (DESIGN.md §9): nothing loops, nothing slides ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition-duration: 120ms !important; }
-  .card:hover { transform: none; }
-}
-
-@media (max-width: 900px) {
-  :root { --gutter: 16px; }
-  .layout { grid-template-columns: 1fr; padding: 24px 16px 48px; }
-  .rack-col { order: 2; }
-  .topbar { padding-right: 118px; }
-  .sky-hero { height: 46vh; min-height: 360px; }
-  .sky-band { height: 96px; }
-  .sky-hero .sky-key { display: none; }
-  .sky-legend { gap: 16px; }
-  .sky-legend li { flex-wrap: nowrap; }
-  .rack-trigger { position: fixed; top: 12px; right: 16px; z-index: 3; display: inline-flex; align-items: center; min-height: 32px; padding: 5px 12px; border: 1px solid rgba(238,241,248,.22); border-radius: 999px; background: var(--sky-fill); color: var(--sky-ink); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.3; cursor: pointer; }
-  .rack-backdrop { position: fixed; inset: 0; z-index: 3; display: block; border: 0; background: rgba(7,9,18,.5); opacity: 0; pointer-events: none; transition: opacity 220ms var(--ease-out); }
-  .rack-backdrop.open { opacity: 1; pointer-events: auto; }
-  /* Bottom-sheet chrome layered on the portable rack. `.qt-rack.rack` matches qt.css's own
-     `.qt.qt-rack` specificity so these overrides (position, corners, safe-area padding) win. */
-  .qt-rack.rack { position: fixed; z-index: 4; inset: auto 0 0; top: auto; max-height: min(72dvh, 620px); overflow: auto; visibility: hidden; pointer-events: none; transform: translateY(105%); transition: transform 260ms var(--ease-out), visibility 0s linear 260ms; border-radius: var(--r-l) var(--r-l) 0 0; padding: 22px 20px max(22px, env(safe-area-inset-bottom)); }
-  .rack.rack-open { visibility: visible; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
-  .rack-close { position: absolute; top: 12px; right: 12px; z-index: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--text); cursor: pointer; }
-  .sky-legend { gap: 16px; }
-  .sky-legend li { flex-direction: column; gap: 2px; font-size: 12px; line-height: 16px; }
-  .sky-legend-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .sky-lede { font-size: 15px; }
-}
-
-@media (max-width: 640px) {
-  .topbar { gap: 8px; overflow-x: auto; scrollbar-width: none; }
-  .topbar::-webkit-scrollbar { display: none; }
-  .topbar .pill-source { display: none; }
-  .brand { margin-right: auto; }
-  .profile { grid-template-columns: 1fr; padding: 18px; margin-bottom: 28px; }
-  .profile .field.chips { grid-column: 1; align-items: flex-start; }
-  .profile .field.chips legend { width: 100%; margin-bottom: 2px; }
-  .near-row { flex-direction: column; align-items: stretch; }
-  .near-row .btn.small { width: 100%; }
-  .card { grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto auto; padding: 16px; }
-  .card-glyph { grid-row: 1 / span 3; }
-  .card-meta { grid-column: 2; grid-row: 3; text-align: left; max-width: none; }
-  .workspace, .queue { padding: 22px 18px; }
-  .steps { padding: 14px; overflow-x: auto; }
-  .step-label { display: none; }
-  .step + .step::before { margin-inline: 8px; }
-  .field.inline { align-items: stretch; flex-direction: column; }
-  .review dl { grid-template-columns: 1fr; gap: 2px; }
-  .review dd + dt { margin-top: 8px; }
-}
-.list-title { font-size: 28px; }

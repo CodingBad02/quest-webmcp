@@ -1,30 +1,8 @@
-# DESIGN.md — v2
+# DESIGN.md — v3
 
 Source of truth: `SPEC.md`. This document is authored directly, not generated. When `SPEC.md` changes, edit this file by hand and re-audit against it.
 
 Scope: the shared npm package `@gatherlight/quest-tools` (capability rack, confirmation dialog) and the two reference sites that consume it, Quest and Survey. The rack and dialog are the portable instrument. Everything else — the sky, quest cards, the reviewer queue, page headings — is Quest's own app, styled with the same tokens but not shipped in the package.
-
-## 0. Audit findings
-
-Audited: `src/styles.css`, `index.html`, `src/components/CapabilityRack.tsx`, `ConfirmModal.tsx`, `Sky.tsx`, `QuestList.tsx`, `Workspace.tsx`, `ReviewerQueue.tsx`, `App.tsx`, `src/webmcp/registry.ts`, `src/types.ts`, old `DESIGN.md`.
-
-**Keep.**
-- The two-surface identity is already real, not aspirational. `styles.css` §"The sky" (dark navy `--sky`, serif `sky-headline`) versus §"Capability rack" (flat white, mono `tool-name`) is the north star direction implemented. Keep the split; formalize it as the token contract in §2.
-- Fraunces for headings, Inter for interface, system mono for the rack (`index.html` font links; `styles.css` `--serif`/`--sans`/`--mono`). These stay as Quest's skin mapping, not as package defaults (see §1, §3).
-- Rack timing: 240ms slide-in, a 1400ms window before "new" settles to "available" (`registry.ts:66`), a 600ms×2 highlight ring, 200ms fade + 260ms collapse on removal, 1200ms linear spin while executing (`styles.css:184-207`). No defect found in three months of use. Keep unchanged; promote to named `--qt-duration-*` tokens (§5).
-- Native `<dialog>` for confirmation, with `showModal()`'s built-in focus containment, `onCancel` mapped to "Keep editing", and focus restored to the field the volunteer was in (`ConfirmModal.tsx`). Keep the mechanism; the copy needs rewriting for v2 (§6).
-- Star grammar: open ring unlit, filled + `feGaussianBlur` glow lit, positions seeded once per campaign, connectors drawn as an MST (`skyLayout.ts`, old `DESIGN.md` §5). Keep; extend from a binary lit/unlit into the three-state grammar in §4 and §8.
-- One global `prefers-reduced-motion` query (`styles.css:238-242`), not per-component overrides. Keep the pattern; extend its coverage list (§9).
-
-**Fix.**
-- `CapabilityRack.tsx`'s `LOCKED` map hardcodes two literal tool names (`check-contribution`, `submit-contribution`) with hand-written unlock copy. This cannot survive a portable package where a site owner supplies its own operations. Fix: "locked" becomes a real rack-item render state carried in the data the site's `available()` function returns, not an app-side lookup table (§5).
-- The "WebMCP off" pill is styled `.pill.warn` — amber, alert-toned (`App.tsx:58`, `styles.css:50`). Manual mode is a first-class supported mode (`Research Docs/07-north-star.md` §7), not a fault. Fix: recolor to the neutral runtime pill in §7. No color signals "something is wrong" when nothing is wrong.
-- Status is rendered three different ways: `.status` text in quest lists (`QuestList.tsx:58`), `.review-head` plain text (`ReviewerQueue.tsx`), and star lit/unlit (`Sky.tsx`). Fix: one chip component, specified once in §4, used in all four places.
-- `types.ts`'s `ContributionStatus` (`draft | checked | submitted | approved | rejected`) and `RackStatus` (`available | new | executing | removing`) cover five of the ten `SPEC.md` envelope states. `invalid`, `declined`, `stale`, `landed`, and `open` have no visual form yet. Fix: §4 specifies all ten.
-- `styles.css:47-51`'s `.pill.source-*` variants (`source-live`, `source-cached`, `source-fallback`) are a one-off pattern for exactly one pill. Fix: fold into the same chip family as §4 rather than growing a second ad hoc pill system.
-
-**Remove.**
-- Nothing structural. The v1 visual language is sound; v2 generalizes it, it does not replace it.
 
 ## 1. Direction
 
@@ -33,6 +11,8 @@ Two surfaces, one contrast.
 **The sky.** Dark, deep, slow. Serif headline. Real coordinates rendered as stars. This is where impact lives, and it never moves fast.
 
 **The rack.** Flat, bright, mono, exact. A machine panel. This is where the agent lives, and every state change is instant and legible.
+
+**The landing is the sky.** One full-viewport hero: a slow procedural spiral galaxy far behind the constellations, the headline, one intent bar (place, minutes, go), the sentence to say to an agent, and three steps. Nothing else competes for the first look. The quest list and the rack sit below the fold.
 
 Everything else — quest cards, the workspace form, the reviewer queue, page copy — is quiet editorial: the sans body font, restrained color, no decoration that doesn't carry meaning.
 
@@ -104,6 +84,9 @@ The package ships CSS custom properties with system defaults. No web font, no ne
 
 ## 3. Two skins, side by side
 
+Quest's own skin is Tailwind v4 utilities plus shadcn/ui primitives (Button, Input, Badge, ToggleGroup, Command, Popover, Drawer, Sonner, Collapsible) on `light-dark()` tokens in `src/index.css`. The shadcn names map onto Quest's palette (`--background` paper, `--primary` green, `--gold`), and one unconditional block bridges them onto `--qt-*`. `qt.css` stays vanilla and unlayered so preflight cannot reach it; the one UA default it relied on, `dialog { margin: auto }`, is restored explicitly. Survey links `qt.css` and nothing else.
+
+
 | Token | Quest | Survey |
 |---|---|---|
 | `--qt-color-bg` | `#F5F4EF` (warm paper) | `#F7F7F5` (default, unset) |
@@ -173,7 +156,7 @@ Three glyph families carry the meaning so color is never the only signal:
 
 | State | Visual | Copy | Timing |
 |---|---|---|---|
-| Available | Solid row, dot, one-line description | `find-quests — matches quests to your time and skills` | Static |
+| Available | Solid row, dot, one-line description | `find-quests — Finds quests near you that fit your time.` | Static |
 | New | Slides in from the right, highlight ring, "New" tag | `New: submit-contribution is ready` | Slide + fade `--qt-duration-base` (240ms) `--qt-ease-out`; ring pulses twice at 600ms each, starting 240ms after slide-in, settling at 1400ms total |
 | Executing | Row dims, dot becomes a spinner, label changes | `Running check-contribution…` | Spin 1200ms per rotation, `--qt-ease-linear` |
 | Removing | Fades, then collapses height, then leaves | `check-contribution is no longer needed` (visible 1.5s before removal starts) | Fade 200ms `--qt-ease-in`, then collapse 260ms `--qt-ease-in` — sequential, not parallel |
@@ -243,14 +226,14 @@ Two copy modes, selected by the adapter. P0 only ships review mode; public-write
 
 **Review mode (P0 — every quest today):**
 
-- Title: `Send this to a reviewer?`
+- Title: `Send this for review?`
 - Summary: the exact fields the volunteer filled, verbatim (for example: `Opening hours: Mo-Fr 08:00-17:00 · Checked by: phone call`)
 - Destination: `Destination: {site name}'s review queue`
 - Visibility: `Visibility: Held for review. Not public yet.`
 - License: `License: {adapter license}` (for example, `Open Database License (ODbL)`)
-- Body: `A person checks this before it changes anything public. You can edit it again if it's sent back.`
-- Buttons: `Keep editing` / `Send for review`
-- Timeout notice, shown once near the buttons, not a ticking countdown: `This closes on its own if you wait 90 seconds. Nothing is sent until you choose.`
+- Body: `A person reads it before anything changes in public. If it comes back, you can edit it.`
+- Buttons: `Keep editing` / `Send`
+- Timeout notice, shown once near the buttons, not a ticking countdown: `Nothing is sent until you choose. This closes after 90 seconds.`
 
 **Public-write mode (P1, reserved — reviewer-owned direct edits):**
 
@@ -281,9 +264,9 @@ The countdown is real and ticks down in `--qt-font-mono`, tabular figures — un
 
 | Condition | Copy |
 |---|---|
-| WebMCP present, runtime identifiable | `Agent runtime: Chrome 153` |
-| WebMCP present, runtime unclear | `Agent runtime: detected` |
-| WebMCP absent | `Agent runtime: none. Manual mode.` |
+| WebMCP present, runtime identifiable | `Agent: Chrome 153` |
+| WebMCP present, runtime unclear | `Agent: detected` |
+| WebMCP absent | `No agent connected. Click the buttons instead.` |
 
 All three render in the same neutral pill style (`--qt-color-text-muted` on `--qt-color-surface-2`, no border-color signaling). Manual mode is not a degraded state; it does not get a warning color.
 
@@ -313,7 +296,8 @@ No node ever shows an edit count beside a name.
 | Rack rows on appear / remove / execute | Layout while typing in any field |
 | Star and knowledge-graph marks lighting, connectors drawing | Quest list order, except by an explicit filter change |
 | Confirmation dialog open / close | The header height or the grid columns |
-| Handoff countdown digits, cross-tab flash on a changed field | Anything decorative or idle — no ambient background animation, ever |
+| Handoff countdown digits, cross-tab flash on a changed field | Anything on the paper surfaces that is decorative or idle |
+| The hero sky only: galaxy spin (1 rev / 240 s), a shallow grain shimmer, nebula drift, pointer parallax | The band sky: the galaxy dims to 25% and the copy is gone |
 
 | Component | Duration | Easing |
 |---|---|---|
@@ -325,8 +309,10 @@ No node ever shows an edit count beside a name.
 | Dialog open / close | 200–220ms | `--qt-ease-out` / `--qt-ease-in` |
 | Cross-tab field flash | 400ms | `--qt-ease-out` |
 | Chip pulse (current contribution) | 400ms | `--qt-ease-out` |
+| Hero copy entry (`@starting-style`, once per mount) | 640ms, 90ms stagger | `--ease-out` |
+| Galaxy alpha hero ↔ band | ~1.2 s lerp | linear per frame |
 
-**`prefers-reduced-motion: reduce`:** one global query, not per-component overrides that can drift. Every duration above collapses to 0–120ms crossfades or disappears outright. The executing spinner becomes a static "Running…" label. Rack removal skips the collapse and vanishes on the next state read. Star and graph-mark ignition skips the scale/opacity tween and sets the final state directly, optionally with a single 150ms fade. The confirmation dialog loses its rise, keeping only a 120ms fade.
+**`prefers-reduced-motion: reduce`:** one global query, not per-component overrides that can drift. Every duration above collapses to 0–120ms crossfades or disappears outright. The executing spinner becomes a static "Running…" label. Rack removal skips the collapse and vanishes on the next state read. Star and graph-mark ignition skips the scale/opacity tween and sets the final state directly, optionally with a single 150ms fade. The confirmation dialog loses its rise, keeping only a 120ms fade. The sky switches to the static SVG path with a CSS haze in the galaxy's place: same composition, no motion.
 
 ## 10. Copy rules
 
@@ -338,7 +324,7 @@ No node ever shows an edit count beside a name.
 6. Errors state the fact and the fix, in that order, never blame.
 7. Sentences stay under 20 words. One idea per sentence. Same term every time: `quest`, `reviewer`, `contribution` — never a synonym for variety.
 8. No exclamation points in system copy. Enthusiasm belongs to the volunteer, not the app.
-9. Runtime and provenance copy is informational, never a boast. `Agent runtime: Chrome 153`, not `Powered by AI!`.
+9. Runtime and provenance copy is informational, never a boast. `Agent: Chrome 153`, not `Powered by AI!`.
 
 ## 11. Accessibility checklist
 
@@ -357,11 +343,12 @@ No node ever shows an edit count beside a name.
 
 ## 12. Layout
 
-**Quest.** Three regions: the sky (top), the quest workspace (main), the rack (side). The sky is the hero while browsing: `52vh`, headline in Fraunces, real stars. Once a quest is open, or in the reviewer role, it shrinks to a `140px` band so the work has the page. It is never a 56px strip; the hero is the identity.
+**Quest.** Three regions: the sky (top), the quest workspace (main), the rack (side). While browsing the sky is the landing: `min-height: 100svh`, the topbar floats over it, the copy block sits left of centre (headline, lede, intent bar, agent sentence), the constellations take the right half, the steps sit bottom-left and one legend bottom-right. Once a quest is open, or in the reviewer role, it shrinks to a `140px` band with the galaxy at 25%.
 
 - At 1920px: `grid-template-columns: minmax(680px, 760px) 320px;`, centered. The workspace never exceeds 760px.
 - At 1280px: `grid-template-columns: minmax(560px, 1fr) 280px;`.
-- Below 900px: single column. Order is sky (hero `40vh` browsing, `96px` band working) → workspace → rack. The rack collapses into a bottom-sheet drawer, opened by a badge showing a live count (`3 tools ready`), sliding up in 260ms.
+- Below 900px: single column. Constellations drop below the copy inside the hero; the band is `96px`. The rack becomes a shadcn Drawer (vaul) opened by a floating count pill (`2 tools`).
+- The quest list carries a kind filter (All / Call / Visit / Read), the provenance badge in its footer, and the knowledge graph in a collapsible `Sources in {place}` section. There is no profile card: place and minutes live in the intent bar, the name is asked once in the workspace as `Sign as`.
 
 **Survey.** No sky. Single column by default.
 

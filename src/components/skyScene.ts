@@ -31,6 +31,13 @@ const PARALLAX_DEG = 1.45;
 const DUST_SHIFT = 14;
 const DUST_COUNT = 1200;
 const DUST_Z = [-600, -200];
+/** Galaxy: a procedural spiral disk far behind the dust field. */
+const GALAXY_Z = -1100;
+const GALAXY_COUNT = 32000;
+/** Fraction of width/height, world convention (x right, y up): sits the bulge right of the headline. */
+const GALAXY_CENTER = { x: 0.14, y: 0.06 };
+const GALAXY_PERIOD_S = 240;
+const GALAXY_PARALLAX = 8;
 const GLOW_ALPHA = 0.06;
 const GLOW_Z = -260;
 const PICK_PX = 16;
@@ -44,6 +51,9 @@ const GOLD = new THREE.Color(0xffd166);
 const DUST = new THREE.Color(0xc9d6ff);
 const GLOW_COLD = new THREE.Color(0xc7d3f2);
 const GLOW_GOLD = new THREE.Color(0xffd166);
+// Galaxy tint: gold core fades through dust-white to an indigo rim.
+const GALAXY_DUST = new THREE.Color(0xf4f1e8);
+const GALAXY_RIM = new THREE.Color(0x6f7fb3);
 
 export interface SkyHandle {
   setLayout(stars: PlacedStar[], edges: [number, number][], w: number, h: number, mode: SkyMode): void;
@@ -76,6 +86,60 @@ function radialTexture(stops: [number, number][]) {
 }
 const haloTexture = () => radialTexture([[0, 1], [0.18, 0.62], [0.5, 0.14], [1, 0]]);
 const glowTexture = () => radialTexture([[0, 1], [0.3, 0.45], [0.6, 0.12], [1, 0]]);
+
+/** Standard-normal sample from a 0..1 rng, for the bulge and the across-arm widening. */
+function gaussian(r: () => number) {
+  const u = Math.max(r(), 1e-6);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r());
+}
+
+/** A spiral galaxy in a unit disk: 12% gaussian bulge, 88% four-arm disk. Per-index generation
+ *  (not grouped by region) so a drawRange over the first half is still a uniform subsample. */
+function buildGalaxy(n: number) {
+  const geo = new THREE.BufferGeometry();
+  const position = new Float32Array(n * 3);
+  const color = new Float32Array(n * 3);
+  const size = new Float32Array(n);
+  const alpha = new Float32Array(n);
+  const seed = new Float32Array(n);
+  const r = rng('sky-galaxy');
+  const arms = 4;
+  const winding = 2.4;
+  const bulgeCount = Math.round(n * 0.12);
+  const tmp = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    let x: number, y: number, z: number, t: number;
+    if (i < bulgeCount) {
+      x = gaussian(r) * 0.09;
+      y = gaussian(r) * 0.09;
+      z = (r() * 2 - 1) * 0.18; // thick core
+      t = Math.min(1, Math.hypot(x, y) / 0.5);
+    } else {
+      t = Math.pow(r(), 0.72); // power-law radius, denser toward the core
+      const arm = Math.floor(r() * arms);
+      const armAngle = (arm / arms) * Math.PI * 2;
+      const widen = 0.05 + t * 0.22; // across-arm gaussian, widening toward the rim
+      const angle = armAngle + t * winding + gaussian(r) * widen;
+      x = Math.cos(angle) * t;
+      y = Math.sin(angle) * t;
+      z = (r() * 2 - 1) * 0.06 * (1 - t * 0.8); // thin toward the rim
+    }
+    position[i * 3] = x; position[i * 3 + 1] = y; position[i * 3 + 2] = z;
+    if (t < 0.4) tmp.lerpColors(GOLD, GALAXY_DUST, t / 0.4);
+    else tmp.lerpColors(GALAXY_DUST, GALAXY_RIM, (t - 0.4) / 0.6);
+    color[i * 3] = tmp.r; color[i * 3 + 1] = tmp.g; color[i * 3 + 2] = tmp.b;
+    size[i] = r() < 0.04 ? 4 + r() * 3 : 1.6 + r() * 2.2; // 4% hot grains
+    alpha[i] = 0.1 + (1 - t) * 0.8;
+    seed[i] = r();
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geo.setAttribute('aColor', new THREE.BufferAttribute(color, 3));
+  geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  geo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  geo.setDrawRange(0, n);
+  return geo;
+}
 
 const STAR_VERT = /* glsl */ `
 attribute float aSize; attribute float aSeed; attribute float aTier; attribute float aPop;
@@ -134,20 +198,68 @@ void main() {
   gl_FragColor = vec4(uColor, (1.0 - smoothstep(0.4, 1.0, d)) * vAlpha);
 }`;
 
-const BG_VERT = /* glsl */ `
-varying float vY;
-void main() { vY = position.y * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+// Galaxy: same uScale convention as STAR_VERT, so its points scale correctly at any depth.
+const GALAXY_VERT = /* glsl */ `
+attribute vec3 aColor; attribute float aSize; attribute float aAlpha; attribute float aSeed;
+uniform float uScale; uniform float uTime;
+varying vec3 vColor; varying float vAlpha;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  float shimmer = 0.88 + 0.12 * sin(uTime * (0.15 + aSeed * 0.3) + aSeed * 53.0);
+  gl_PointSize = max(1.0, aSize * uScale / -mv.z);
+  gl_Position = projectionMatrix * mv;
+  vColor = aColor; vAlpha = aAlpha * shimmer;
+}`;
 
+const GALAXY_FRAG = /* glsl */ `
+precision highp float;
+uniform float uGalaxy;
+varying vec3 vColor; varying float vAlpha;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float d = length(c) * 2.0;
+  if (d > 1.0) discard;
+  float dome = pow(max(0.0, 1.0 - d), 1.8);
+  gl_FragColor = vec4(vColor, dome * vAlpha * uGalaxy);
+}`;
+
+const BG_VERT = /* glsl */ `
+varying vec2 vUv;
+void main() { vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+
+// Nebula haze: two-octave value noise inside an ellipse around the galaxy centre, gold to indigo,
+// plus the corner vignette that mixes toward uTop so the seam against the topbar stays invisible.
 const BG_FRAG = /* glsl */ `
 precision highp float;
-uniform vec3 uTop; uniform vec3 uHorizon;
-varying float vY;
+uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uHazeWarm; uniform vec3 uHazeCold;
+uniform float uTime; uniform float uAspect; uniform float uHaze; uniform vec2 uHazeCenter; uniform vec2 uShift;
+varying vec2 vUv;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  float a = hash(i), b = hash(i + vec2(1.0, 0.0)), c = hash(i + vec2(0.0, 1.0)), d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
 void main() {
-  float t = pow(vY, 1.25);
+  float t = pow(vUv.y, 1.25);
   vec3 col = mix(uHorizon, uTop, t);
+
+  vec2 p = (vUv - uHazeCenter - uShift * 0.015) * vec2(uAspect, 1.0);
+  float ellipse = 1.0 - smoothstep(0.0, 0.62, length(p * vec2(1.0, 1.6)));
+  vec2 drift = vec2(uTime * 0.004, uTime * 0.003);
+  float n = noise(p * 4.0 + drift) * 0.6 + noise(p * 9.0 - drift) * 0.4;
+  vec3 hazeColor = mix(uHazeWarm, uHazeCold, clamp(length(p) * 1.8, 0.0, 1.0));
+  col += hazeColor * n * ellipse * 0.16 * uHaze;
+
+  float vign = smoothstep(0.0, 0.9, length(vUv - 0.5));
+  col = mix(col, uTop, vign * 0.18);
+
   // Sub-LSB dither so the gradient never bands on a dark surface.
-  float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-  gl_FragColor = vec4(col + n / 255.0, 1.0);
+  float dn = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  gl_FragColor = vec4(col + dn / 255.0, 1.0);
 }`;
 
 export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
@@ -162,14 +274,21 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(FOG, D - 60, D + 520);
-  const camera = new THREE.PerspectiveCamera(30, 1, 200, 4000);
+  const camera = new THREE.PerspectiveCamera(30, 1, 200, 6000);
   camera.position.set(0, 0, D);
   const pivot = new THREE.Vector3(0, 0, PIVOT_Z);
   const orbitR = D - PIVOT_Z;
 
-  // Background gradient, drawn in clip space behind everything.
+  // Background gradient, drawn in clip space behind everything. uHazeCenter mirrors GALAXY_CENTER,
+  // offset from screen centre, in the same (0.5, 0.5)-origin UV space the nebula noise runs in.
   const bgMat = new THREE.ShaderMaterial({
-    uniforms: { uTop: { value: SKY_TOP }, uHorizon: { value: SKY_HORIZON } },
+    uniforms: {
+      uTop: { value: SKY_TOP }, uHorizon: { value: SKY_HORIZON },
+      uHazeWarm: { value: GOLD }, uHazeCold: { value: GALAXY_RIM },
+      uTime: { value: 0 }, uAspect: { value: 1 }, uHaze: { value: 0 },
+      uHazeCenter: { value: new THREE.Vector2(0.5 + GALAXY_CENTER.x, 0.5 + GALAXY_CENTER.y) },
+      uShift: { value: new THREE.Vector2(0, 0) },
+    },
     vertexShader: BG_VERT, fragmentShader: BG_FRAG, depthTest: false, depthWrite: false,
   });
   const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat);
@@ -209,6 +328,23 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     dustGeo.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
     dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
   }
+
+  // Galaxy: a procedural spiral disk far behind the dust field. Never picked, never a place.
+  const galaxyGeo = buildGalaxy(GALAXY_COUNT);
+  const galaxyMat = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: D }, uTime: { value: 0 }, uGalaxy: { value: 0 } },
+    vertexShader: GALAXY_VERT, fragmentShader: GALAXY_FRAG,
+    transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+  });
+  const galaxyPoints = new THREE.Points(galaxyGeo, galaxyMat);
+  galaxyPoints.frustumCulled = false;
+  galaxyPoints.renderOrder = -8;
+  const galaxy = new THREE.Group();
+  galaxy.rotation.x = -0.35;
+  galaxy.add(galaxyPoints);
+  scene.add(galaxy);
+  let galaxyAlpha = 0, galaxyTarget = 1;
+  let galaxyBaseX = 0, galaxyBaseY = 0;
 
   // Stars.
   const starGeo = new THREE.BufferGeometry();
@@ -278,6 +414,17 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       dustPos[i * 3 + 2] = z;
     }
     (dustGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
+  function layoutGalaxy() {
+    const k = (D - GALAXY_Z) / D; // 1.55: this depth's share of the view at rest
+    const scale = 1.3 * (width / 2) * k;
+    galaxy.scale.set(scale, scale, scale);
+    galaxyBaseX = GALAXY_CENTER.x * width;
+    galaxyBaseY = GALAXY_CENTER.y * height;
+    galaxy.position.set(galaxyBaseX, galaxyBaseY, GALAXY_Z);
+    galaxyGeo.setDrawRange(0, width < 700 ? Math.floor(GALAXY_COUNT / 2) : GALAXY_COUNT);
+    galaxyTarget = mode === 'hero' ? 1 : 0.25;
   }
 
   function rebuildGlows() {
@@ -433,6 +580,13 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     breathe(t);
     starMat.uniforms.uTime.value = t;
     dustMat.uniforms.uTime.value = t;
+    galaxyAlpha += (galaxyTarget - galaxyAlpha) * 0.04;
+    galaxyMat.uniforms.uGalaxy.value = galaxyAlpha;
+    galaxyMat.uniforms.uTime.value = t;
+    galaxyPoints.visible = galaxyAlpha > 0.005;
+    galaxyPoints.rotation.z = (t / GALAXY_PERIOD_S) * Math.PI * 2;
+    bgMat.uniforms.uHaze.value = galaxyAlpha;
+    bgMat.uniforms.uTime.value = t;
     pointerNow.lerp(pointerTarget, 0.09);
     // Slow orbit around the pivot plus the pointer swing. Pointer right moves the camera left, so the
     // constellation follows the pointer and the dust behind the pivot counter-moves.
@@ -447,6 +601,9 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
     );
     camera.lookAt(pivot);
     dust.position.set(-pointerNow.x * DUST_SHIFT, pointerNow.y * DUST_SHIFT, 0);
+    // Pointer parallax on top of the base offset, further than dust so it reads deeper.
+    galaxy.position.set(galaxyBaseX - pointerNow.x * GALAXY_PARALLAX, galaxyBaseY + pointerNow.y * GALAXY_PARALLAX, GALAXY_Z);
+    bgMat.uniforms.uShift.value.set(pointerNow.x, pointerNow.y);
     renderer.render(scene, camera);
   }
 
@@ -467,6 +624,9 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       camera.updateProjectionMatrix();
       starMat.uniforms.uScale.value = D * renderer.getPixelRatio();
       dustMat.uniforms.uPx.value = renderer.getPixelRatio();
+      galaxyMat.uniforms.uScale.value = D * renderer.getPixelRatio();
+      bgMat.uniforms.uAspect.value = width / height;
+      layoutGalaxy();
       rebuildBuffers();
     },
     setLit(nextTiers, animate) {
@@ -525,6 +685,7 @@ export function createSkyScene(canvas: HTMLCanvasElement): SkyHandle | null {
       halo.dispose(); glowTex.dispose();
       starGeo.dispose(); starMat.dispose();
       dustGeo.dispose(); dustMat.dispose();
+      galaxyGeo.dispose(); galaxyMat.dispose();
       edgeGeo.dispose(); edgeMat.dispose();
       litEdgeGeo.dispose(); litEdgeMat.dispose();
       bg.geometry.dispose(); bgMat.dispose();

@@ -30,9 +30,9 @@ const WHEELCHAIR_LABEL: Record<Draft['wheelchair'], string> = { yes: 'Yes', limi
 
 function validate(): string[] {
   const errors: string[] = [];
-  if (!draft.wheelchair) errors.push('wheelchair: choose yes, limited, or no.');
-  if (!draft.imageDataUrl) errors.push('photo: add one photo of the entrance.');
-  if (draft.note.length > 300) errors.push('note: keep it under 300 characters.');
+  if (!draft.wheelchair) errors.push('Choose yes, limited, or no.');
+  if (!draft.imageDataUrl) errors.push('Add one photo of the entrance.');
+  if (draft.note.length > 300) errors.push('Keep the note under 300 characters.');
   return errors;
 }
 
@@ -71,7 +71,7 @@ const controller = createQuestTools({
   operations: { check, submit },
   available: () => {
     if (!contribution || submitted || expired) return {};
-    return { check: true, submit: checked ? true : { locked: 'Unlocks after check-contribution passes.' } };
+    return { check: true, submit: checked ? true : { locked: 'Opens after the check passes.' } };
   },
   confirm: createDialogConfirm(),
 });
@@ -92,7 +92,7 @@ function renderEmpty(message: string) {
     el('div', { class: 'survey-card' }),
   );
   const card = work.firstElementChild!;
-  card.append(el('h2', { class: 'survey-card-title' }, 'Nothing to survey yet'), el('p', { class: 'survey-muted' }, message));
+  card.append(el('h2', { class: 'survey-card-title' }, 'No quest here yet'), el('p', { class: 'survey-muted' }, message));
   const a = el('a', { class: 'survey-link', href: QUEST_URL }, 'Open Quest');
   card.append(a);
 }
@@ -118,7 +118,7 @@ function renderForm(c: StoredContribution) {
   const card = el('div', { class: 'survey-card' });
   card.append(
     el('h2', { class: 'survey-card-title' }, safeText(c.quest.placeName, 80)),
-    el('p', { class: 'survey-muted' }, 'Go to the entrance. Answer what you can see. The agent checks the form; you decide when it is sent.'),
+    el('p', { class: 'survey-muted' }, 'Stand at the entrance. Answer what you see. Your agent checks the form. You decide when to send.'),
   );
 
   const wc = el('label', { class: 'survey-field' }, 'Can a wheelchair user get in?');
@@ -179,7 +179,7 @@ function startCountdown(expiresAt: string) {
       // The grant is dead on the server too. Drop the tools and the form; nothing can be sent from here.
       expired = true; store = null;
       controller.refresh();
-      strip.dataset.expired = ''; stripText.textContent = 'Handoff expired. Ask your agent to reopen this quest from Quest.'; stripTime.textContent = '';
+      strip.dataset.expired = ''; stripText.textContent = 'Link expired. Ask your agent to reopen this quest on Quest.'; stripTime.textContent = '';
       work.querySelectorAll('input, select, textarea, button').forEach((e) => { (e as HTMLInputElement).disabled = true; });
       return;
     }
@@ -194,7 +194,7 @@ function startCountdown(expiresAt: string) {
 
 async function boot() {
   const token = new URLSearchParams(location.search).get('handoff');
-  if (!token) return renderEmpty('This site receives quests from Quest. Ask your agent to find a step-free entry quest there.');
+  if (!token) return renderEmpty('Quests arrive from Quest. Ask your agent for a step-free entry quest there.');
   try {
     const anon = createStoreClient(STORE_URL, 'exchange');
     const ex = await anon.exchange(token);
@@ -205,7 +205,7 @@ async function boot() {
     if (contribution.state !== 'open') return renderEmpty(`This contribution is already ${contribution.state}.`);
     history.replaceState(null, '', location.pathname);
     strip.hidden = false;
-    stripText.textContent = 'Carried from Quest · check-contribution ready · expires';
+    stripText.textContent = 'From Quest · check ready · expires';
     startCountdown(ex.expiresAt);
     renderForm(contribution);
     controller.refresh();

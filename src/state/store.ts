@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { toast as sonnerToast } from 'sonner';
 import type { StoredContribution } from '../../worker/src/client.ts';
 import { store } from './storeClient';
 import { buildCampaigns, clearOverpassCache, loadQuests } from '../data/overpass';
@@ -20,7 +21,8 @@ const defaultState = (): AppState => ({
   questSource: 'loading',
   checkErrors: [],
   checkTitle: null,
-  toast: null,
+  spotlightQuestId: null,
+  openSources: false,
   handoff: null,
 });
 
@@ -127,7 +129,7 @@ export async function loadContributionsFromStore() {
   } catch {
     if (!storeWarned) {
       storeWarned = true;
-      toast('Store unreachable. Quests still load; submitting needs the store.');
+      toast('Store unreachable. You can browse. Sending needs the store.');
     }
   }
 }
@@ -154,12 +156,7 @@ export function openQuest(questId: string) {
 
 export function closeQuest() { setState({ activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], checkTitle: null, handoff: null }); }
 
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
-export function toast(msg: string) {
-  setState({ toast: msg });
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => setState({ toast: null }), 4000);
-}
+export function toast(msg: string) { sonnerToast(msg, { duration: 4000 }); }
 
 export function updateDraft(payload: ContributionPayload) {
   setState({ draft: payload, workspace: state.workspace === 'checked' ? 'in-workspace' : state.workspace });

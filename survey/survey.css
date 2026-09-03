@@ -10,8 +10,8 @@ body {
   box-sizing: border-box;
 }
 
-.survey-header { display: flex; align-items: baseline; gap: 14px; padding-block: 4px 20px; flex-wrap: wrap; }
-.survey-title { margin: 0; font-size: 20px; font-weight: 600; }
+.survey-header { display: flex; flex-direction: column; gap: 4px; padding-block: 4px 20px; }
+.survey-title { margin: 0; font-size: 22px; font-weight: 600; }
 .survey-tagline { margin: 0; font-size: 14px; color: #5B5B57; }
 
 .qt-handoff { margin-bottom: 20px; }
@@ -19,7 +19,7 @@ body {
 .survey-layout { display: grid; grid-template-columns: 1fr; gap: 24px; }
 .survey-main { min-width: 0; }
 
-.survey-card { background: #FFFFFF; border: 1px solid #DDDDD8; border-radius: 8px; padding: 20px; }
+.survey-card { background: #FFFFFF; border: 1px solid #DDDDD8; border-radius: 10px; padding: 24px; }
 .survey-card-title { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
 .survey-muted { margin: 0 0 16px; font-size: 14px; line-height: 1.5; color: #5B5B57; }
 .survey-link { color: #2F6F4F; font-weight: 500; }

@@ -125,19 +125,26 @@ export function gutterFor(w: number) { return w <= 900 ? 16 : Math.max(24, (w - 
 
 /** Vertical band the stars may occupy: the hero leaves the upper sky for the headline, both leave
  *  room for the legend — the hero reserves more since v2 stacks the state key above it (§4, §8). */
-export function starBand(mode: SkyMode, h: number): { top: number; bottom: number } {
-  if (mode === 'hero') return { top: Math.max(h * 0.46, 200), bottom: h - 96 };
+export function starBand(mode: SkyMode, w: number, h: number): { top: number; bottom: number } {
+  if (mode === 'hero') return w > 900 ? { top: Math.max(h * 0.14, 80), bottom: h - 140 } : { top: h * 0.72, bottom: h - 150 };
   return { top: 16, bottom: h - 40 };
+}
+
+/** Horizontal span the panels share. The wide hero keeps the left half for the copy. */
+function starSpan(mode: SkyMode, w: number): { x0: number; x1: number } {
+  const gutter = gutterFor(w);
+  if (mode === 'hero' && w > 900) return { x0: Math.max(gutter, w * 0.5), x1: w - gutter };
+  return { x0: gutter, x1: w - gutter };
 }
 
 export function placeStars(model: SkyModel, w: number, h: number, mode: SkyMode): PlacedLayout {
   const n = Math.max(model.panels.length, 1);
-  const gutter = gutterFor(w);
-  const colW = (w - gutter * 2 - PANEL_GAP * (n - 1)) / n;
-  const { top, bottom } = starBand(mode, h);
+  const span = starSpan(mode, w);
+  const colW = (span.x1 - span.x0 - PANEL_GAP * (n - 1)) / n;
+  const { top, bottom } = starBand(mode, w, h);
   const usableH = Math.max(bottom - top, 24);
   const pad = Math.min(PANEL_PAD, colW * 0.08);
-  const panels = model.panels.map((_, i) => { const x0 = gutter + i * (colW + PANEL_GAP); return { x0, x1: x0 + colW }; });
+  const panels = model.panels.map((_, i) => { const x0 = span.x0 + i * (colW + PANEL_GAP); return { x0, x1: x0 + colW }; });
   const panelIndex = new Map(model.panels.map((p, i) => [p.campaignId, i]));
   const zSpread = Z_SPREAD[mode];
   const stars = model.stars.map((s) => {

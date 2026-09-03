@@ -65,3 +65,37 @@ export async function reverseGeocode(lat: number, lon: number): Promise<Place | 
   if (!data) return null;
   return toPlace({ ...data, lat: String(lat), lon: String(lon) });
 }
+
+// ---------- Photon: search-as-you-type suggestions (Nominatim's policy forbids autocomplete) ----------
+
+const PHOTON = 'https://photon.komoot.io/api/';
+
+interface PhotonFeature { geometry: { coordinates: [number, number] }; properties: { name?: string; city?: string; town?: string; village?: string; state?: string; country?: string; osm_key?: string } }
+
+function photonLabel(p: PhotonFeature['properties']): string {
+  const city = p.city ?? p.town ?? p.village;
+  const parts = [p.name, city && city !== p.name ? city : undefined, !city ? p.state : undefined].filter(Boolean);
+  return safeText(parts.join(', '), 60);
+}
+
+/** Up to `limit` places matching a partial query, biased toward `near`. Aborts on the caller's signal. */
+export async function suggest(query: string, near: Place, signal?: AbortSignal, limit = 5): Promise<Place[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const url = `${PHOTON}?q=${encodeURIComponent(q)}&limit=${limit}&lang=en&lat=${near.lat}&lon=${near.lon}`;
+  try {
+    const r = await fetch(url, { signal });
+    if (!r.ok) return [];
+    const data = (await r.json()) as { features?: PhotonFeature[] };
+    const seen = new Set<string>();
+    return (data.features ?? []).flatMap((f) => {
+      const [lon, lat] = f.geometry.coordinates;
+      const label = photonLabel(f.properties);
+      if (!label || seen.has(label) || !Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+      seen.add(label);
+      return [{ label, lat, lon }];
+    });
+  } catch {
+    return [];
+  }
+}

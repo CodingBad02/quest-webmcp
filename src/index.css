@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* qt.css stays unlayered on purpose: unlayered author CSS beats every Tailwind layer, so preflight
+   cannot reach anything qt.css declares. Partner sites link this same file; never edit it. */
+@import "@gatherlight/quest-tools/qt.css";
+@import "./styles.css";
+
+/* Dark follows the OS unless <html> carries .dark or .light. */
+@custom-variant dark {
+  &:where(.dark, .dark *) { @slot; }
+  @media (prefers-color-scheme: dark) { &:where(:not(.light, .light *)) { @slot; } }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-info: var(--info);
+  --color-warn: var(--warn);
+  --color-gold: var(--gold);
+  --color-sky: var(--sky);
+  --color-sky-top: var(--sky-top);
+  --color-sky-ink: var(--sky-ink);
+  --color-sky-muted: var(--sky-muted);
+  --color-sky-line: var(--sky-line);
+  --color-sky-fill: var(--sky-fill);
+
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: Fraunces, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-in: cubic-bezier(.6,0,.8,.2);
+  --shadow-card: var(--shadow-card);
+
+  --breakpoint-md: 56.25rem;
+}
+
+:root {
+  color-scheme: light dark;
+  interpolate-size: allow-keywords;
+
+  /* shadcn contract on Quest's palette: warm paper, ink, forest green, one gold. */
+  --background: light-dark(#f5f4ef, #111216);
+  --foreground: light-dark(#1a1a18, #ecedf1);
+  --card: light-dark(#ffffff, #191a1f);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(#ffffff, #191a1f);
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(#2f6f4f, #6fcf97);
+  --primary-foreground: light-dark(#ffffff, #0d1f16);
+  --secondary: light-dark(#f0efe9, #21222a);
+  --secondary-foreground: var(--foreground);
+  --muted: light-dark(#f0efe9, #21222a);
+  --muted-foreground: light-dark(#5d5d58, #a9adb8);
+  --accent: light-dark(#e6e5de, #2a2b34);
+  --accent-foreground: var(--foreground);
+  --destructive: light-dark(#b3261e, #f2867a);
+  --border: light-dark(#dcdbd3, #2c2e37);
+  --input: var(--border);
+  --ring: var(--primary);
+  --radius: 0.625rem;
+
+  /* Quest-only. The sky is one night surface in both themes. */
+  --info: light-dark(#3b475e, #b3bccf);
+  --warn: light-dark(#8f6a24, #d8b25c);
+  --gold: #ffd166;
+  --sky: #0a0e1c;
+  --sky-top: #070912;
+  --sky-ink: #eef1f8;
+  --sky-muted: #a6afc8;
+  --sky-line: rgba(238, 241, 248, .1);
+  --sky-fill: rgba(238, 241, 248, .07);
+  --shadow-card: 0 1px 2px rgba(20, 22, 30, .07), 0 1px 1px rgba(20, 22, 30, .04);
+  --gutter: max(24px, calc((100vw - 1200px) / 2));
+}
+.dark { color-scheme: dark; }
+.light { color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not(.light) { --shadow-card: none; } }
+.dark { --shadow-card: none; }
+
+/* Quest's skin on the portable --qt-* contract. qt.css declares tokens on .qt, not :root, so repeat on .qt. */
+:root, .qt {
+  --qt-color-bg: var(--background);
+  --qt-color-surface: var(--card);
+  --qt-color-surface-2: var(--secondary);
+  --qt-color-surface-3: var(--accent);
+  --qt-color-border: var(--border);
+  --qt-color-text: var(--foreground);
+  --qt-color-text-muted: var(--muted-foreground);
+  --qt-color-accent: var(--primary);
+  --qt-color-accent-ink: var(--primary-foreground);
+  --qt-color-info: var(--info);
+  --qt-color-warn: var(--warn);
+  --qt-color-danger: var(--destructive);
+  --qt-color-focus: var(--primary);
+  --qt-color-gold: var(--gold);
+  --qt-font-ui: var(--font-sans);
+}
+
+/* Preflight zeroes <dialog> margin, which is what centres the native confirm. Restore it. */
+@layer base {
+  dialog { margin: auto; }
+  html { background: var(--background); }
+  body { @apply bg-background text-foreground font-sans antialiased; min-width: 320px; font-optical-sizing: auto; caret-color: var(--primary); }
+  * { @apply border-border; }
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+  ::selection { background: color-mix(in srgb, var(--gold) 45%, transparent); }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  a { text-underline-offset: 3px; text-decoration-thickness: 1px; }
+}
+.qt.qt-confirm { margin: auto; }
+/* Utilities lose to qt.css; these two rack overrides must stay unlayered at .qt.qt-rack specificity. */
+.qt-rack.rack { position: sticky; top: 24px; }
+[data-slot="drawer-content"] .qt.qt-rack { border: 0; border-radius: 0; box-shadow: none; }
+
+/* Reduced motion: nothing loops, nothing slides. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 120ms !important; }
+}

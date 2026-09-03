@@ -1,0 +1,35 @@
+/* The sky's own rules: canvas/SVG plumbing, star state classes, the hover tip, and the static haze
+   the reduced-motion/no-WebGL path shows instead of the galaxy. Layout of the copy on top is in JSX. */
+.sky-root { position: relative; isolation: isolate; overflow: hidden; background: var(--sky); color: var(--sky-ink); border-bottom: 1px solid var(--sky-line); }
+.sky-hero { min-height: 100svh; }
+.sky-band { height: 140px; }
+.sky-canvas, .sky-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sky-svg svg { display: block; width: 100%; height: 100%; }
+.sky-svg .edge { stroke: rgba(238,241,248,.12); stroke-width: 1; }
+.sky-svg .edge.on { stroke: rgba(255,209,102,.55); stroke-width: 1; }
+.sky-svg .star .core { fill: rgba(219,227,248,.62); }
+.sky-svg .star.landed .core { fill: var(--gold); }
+.sky-svg .star.approved .core.ring { fill: none; stroke: var(--gold); stroke-width: 2; }
+.sky-svg .star .halo { fill: var(--gold); opacity: .55; }
+.star-hit { position: absolute; z-index: 1; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; transform: translate(-50%, -50%); cursor: default; }
+.star-hit:focus-visible { outline-color: var(--gold); outline-offset: -12px; }
+
+/* The SVG paints no background of its own. The gradient lives here so the still sky keeps the
+   galaxy's composition: haze centred where the WebGL bulge sits (64% across, 44% down). */
+.sky-svg { background: linear-gradient(var(--sky-top), #0e1326); }
+.sky-hero .sky-svg {
+  background:
+    radial-gradient(ellipse 58% 46% at 64% 44%, rgba(255,209,102,.11), rgba(201,214,255,.05) 38%, rgba(111,127,179,.035) 62%, transparent 82%),
+    radial-gradient(ellipse 120% 90% at 64% 44%, rgba(111,127,179,.06), transparent 70%),
+    linear-gradient(var(--sky-top), #0e1326);
+}
+
+.sky-tip { position: absolute; z-index: 2; transform: translate(-50%, calc(-100% - 16px)); display: grid; gap: 2px; max-width: 260px; padding: 9px 13px; border-radius: 8px; background: rgba(12,17,34,.94); border: 1px solid rgba(238,241,248,.14); box-shadow: 0 12px 32px -10px rgba(7,9,18,.7); font-size: 13px; line-height: 1.4; color: var(--sky-muted); pointer-events: none; animation: fade 140ms var(--ease-out); }
+.sky-tip strong { color: var(--sky-ink); font-weight: 500; }
+.sky-tip span { white-space: nowrap; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Hero copy enters once, staggered by --d. Reduced motion collapses it to a short fade. */
+.hero-in { opacity: 1; transform: none; transition: opacity 640ms var(--ease-out) var(--d, 0ms), transform 640ms var(--ease-out) var(--d, 0ms); }
+@starting-style { .hero-in { opacity: 0; transform: translateY(14px); } }
+@media (max-width: 899.98px) { .sky-band { height: 96px; } }

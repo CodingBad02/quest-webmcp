@@ -37,7 +37,7 @@ const tools = createQuestTools({
     submit: async () => { const id = await save(form); return result('submitted', 'Sent for review.', { contributionId: id }); },
   },
   // Decides registration on every refresh(). true = registered, { locked } = shown greyed with the reason, false = hidden.
-  available: () => ({ check: true, submit: form.checked ? true : { locked: 'Unlocks after check-contribution passes.' } }),
+  available: () => ({ check: true, submit: form.checked ? true : { locked: 'Opens after the check passes.' } }),
   confirm: createDialogConfirm(),
 });
 
@@ -53,7 +53,7 @@ button.onclick = () => tools.run('submit', {}, { viaUi: true });
 
 - **Registration by state.** `available()` is re-read on every `refresh()`; tools appear and disappear with the page. A locked verb shows in the rack with its reason and answers an agent with that reason.
 - **The order of submit.** `check` → confirm → `check` again → `submit`. A site cannot skip the confirmation, and a draft that stops validating after the click is not sent.
-- **Confirmation.** A native `<dialog>` with the exact summary, destination, visibility, license, `Keep editing` / `Send for review`. Waits up to 90 s. Decline, timeout, and agent cancellation return distinct results. One pending confirmation per page.
+- **Confirmation.** A native `<dialog>` with the exact summary, destination, visibility, license, `Keep editing` / `Send`. Waits up to 90 s. Decline, timeout, and agent cancellation return distinct results. One pending confirmation per page.
 - **The `quest/1` envelope.** Every result is text ending in one machine line: `quest/1 {"ok":true,"state":"checked","questId":"…","next":{"url":"…","handoff":"…"}}`. `parseResult(text)` reads it back. Ten states: `available open invalid checked declined submitted approved rejected stale landed`.
 - **Cross-site continuation.** `open` may return `next: { url, handoff }`. The agent navigates; the receiving origin exchanges the handoff and registers its own verbs.
 - **Budgets.** Names ≤ 30, descriptions ≤ 500, parameter descriptions ≤ 150, output ≤ 1,500 characters. Enforced at create time and on every result.

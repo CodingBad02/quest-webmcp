@@ -13,7 +13,7 @@ Five verbs, one import. Any site that adopts `@gatherlight/quest-tools` becomes 
 | Part | Path | What it is |
 |---|---|---|
 | Package | `packages/quest-tools` | `@gatherlight/quest-tools`. Framework-neutral. Registers the five WebMCP tools, owns the state machine, the `quest/1` result envelope, character budgets, the check → confirm → check → submit order, cancellation, and the capability rack. Optional rack renderer and native `<dialog>` confirm. |
-| Quest | `src/` | The reference site. React. Two adapters: OpenStreetMap gaps near central Bengaluru (hours, step-free entry) and Wikidata statements about Bengaluru that lack a source. Runs the review queue. Renders two collective artifacts: the sky (real places as stars) and the knowledge graph (entity → claim → source). Approved marks stay outlined; only landed ones fill. |
+| Quest | `src/` | The reference site. React, Tailwind v4, shadcn/ui, Three.js sky. Two adapters: OpenStreetMap gaps near central Bengaluru (hours, step-free entry) and Wikidata statements about Bengaluru that lack a source. Runs the review queue. Renders two collective artifacts: the sky (real places as stars) and the knowledge graph (entity → claim → source). Approved marks stay outlined; only landed ones fill. |
 | Survey | `survey/` | A partner site on a second origin. Vanilla TypeScript. Receives a handoff from Quest and lets a person record a step-free entrance check. Imports the package, overrides no design token. |
 | Store | `worker/` | One Cloudflare Durable Object holding two entities: `contributions` and `handoffs`. Handoffs are hashed, origin-bound, single-use, and expire; exchanging one yields a grant scoped to that contribution, never the volunteer's session. Submitted contributions are frozen. Self-review is refused. Unknown browser origins get 403. Serves Survey as static assets. |
 
@@ -68,7 +68,7 @@ Open Quest in a WebMCP runtime:
 - Chrome 149 or newer: enable `chrome://flags/#enable-webmcp-testing`, relaunch. Or launch with `--enable-features=WebMCP`.
 - ChatGPT desktop app browser: WebMCP is on by default.
 
-Without WebMCP everything runs in manual mode. Every tool has a button, and the Send button opens the same confirmation dialog the agent path does: the person always confirms the exact preview. The rack says `Agent runtime: none. Manual mode.`
+Without WebMCP everything runs in manual mode. Every tool has a button, and the Send button opens the same confirmation dialog the agent path does: the person always confirms the exact preview. The rack says `No agent connected. Click the buttons instead.`
 
 Open `/?role=reviewer` in a second tab to review. The reviewer tab uses a separate anonymous session so the two-tab demo works in one browser; this is a demo compromise, and it means one browser can approve its own work. Reviewer identity by OpenStreetMap or Wikimedia sign-in is P1.
 
@@ -79,7 +79,10 @@ npm run test:contract          # package: names, budgets, registration by state,
 node worker/test/smoke.mjs [url]   # store: ownership, grants, handoff origin/single-use/expiry, self-review, url checks; default http://localhost:8787
 npm run build && npm run build:survey
 npx vite preview --port 4173 & npm run test:e2e   # real Chrome, WebMCP on, the whole loop through document.modelContext
+npm run test:live [questUrl] [storeUrl]   # deployed endpoints: Quest, Survey, store CORS/origin rules, url check; defaults to the live URLs
 ```
+
+Before a push, the diff gets an independent review from OpenAI Codex (`codex review`, read-only sandbox). Blockers are fixed before the commit; the commit trailer records the review.
 
 ## Deploy
 

@@ -123,7 +123,10 @@ export interface AppState {
   checkErrors: string[];
   /** cite-claim only: the fetched page title of the checked source, shown under the field. */
   checkTitle: string | null;
-  toast: string | null;
+  /** Set by "See your star": the sky re-runs this quest's ignition once the hero is back, then clears it. */
+  spotlightQuestId: string | null;
+  /** Set by "See your source": the Sources section opens on the next landing render. */
+  openSources: boolean;
   /** The open cross-site continuation for the active access-photo quest, if any. */
   handoff: Handoff | null;
 }

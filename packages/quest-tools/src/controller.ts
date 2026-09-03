@@ -39,10 +39,10 @@ const SCHEMAS: Record<Verb, InputSchema> = {
 
 /** What a person reads in the rack. Short. The agent reads DESCRIPTIONS instead. */
 const LABELS: Record<Verb, string> = {
-  find: 'Matches quests to your time and skills.',
-  open: 'Opens a quest workspace.',
-  check: 'Checks the form. Says what to fix.',
-  submit: 'Sends to a reviewer. Waits for your click.',
+  find: 'Finds quests near you that fit your time.',
+  open: 'Opens one quest.',
+  check: 'Checks your entry. Says what to fix.',
+  submit: 'Sends it for review. Waits for your click.',
   approve: 'Approves one submission.',
 };
 
@@ -52,9 +52,9 @@ const NEW_SETTLES_MS = 1400;
 const REMOVE_AFTER_MS = 500;
 
 export function runtimeDescription(present: boolean): string {
-  if (!present) return 'Agent runtime: none. Manual mode.';
+  if (!present) return 'No agent connected. Click the buttons instead.';
   const chrome = typeof navigator !== 'undefined' ? navigator.userAgent.match(/Chrome\/(\d+)/) : null;
-  return chrome ? `Agent runtime: Chrome ${chrome[1]}` : 'Agent runtime: detected';
+  return chrome ? `Agent: Chrome ${chrome[1]}` : 'Agent: detected';
 }
 
 function assertBudgets(descriptions: Record<Verb, string>, schemas: Record<Verb, InputSchema>) {

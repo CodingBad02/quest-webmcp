@@ -20,13 +20,8 @@ export function ConstellationStatic({ layout, tiers, w, h, onHover }: Props) {
     <div className="sky-svg">
       <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label="Shared sky of campaigns">
         <defs>
-          <linearGradient id="sky-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#070912" />
-            <stop offset="1" stopColor="#0e1326" />
-          </linearGradient>
           <filter id="sky-glow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="7" /></filter>
         </defs>
-        <rect width={w} height={h} fill="url(#sky-grad)" />
         {edges.map(([a, b], i) => <line key={i} x1={stars[a].x} y1={stars[a].y} x2={stars[b].x} y2={stars[b].y} className="edge" />)}
         {edges.map(([a, b], i) => (tierOf(a) >= 1 && tierOf(b) >= 1) ? <line key={`on-${i}`} x1={stars[a].x} y1={stars[a].y} x2={stars[b].x} y2={stars[b].y} className="edge on" /> : null)}
         {stars.map((s, i) => {

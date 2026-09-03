@@ -278,7 +278,7 @@ export const controller = createQuestTools({
         mergeContribution(sc);
         setState({ workspace: 'submitted' });
         broadcast({ type: 'contribution:submitted', contributionId: sc.id, questId: q.id });
-        toast(`Sent to a reviewer: ${safeText(q.placeName)}.`);
+        toast(`Sent for review: ${safeText(q.placeName)}.`);
         const lights = q.type === 'cite-claim' ? 'Its line lights in the knowledge graph when a reviewer approves it.' : 'A star lights when a reviewer approves it.';
         return result('submitted', `Submitted "${safeText(q.title)}" for review. ${lights}`, { contributionId: sc.id });
       } catch (e) {
@@ -347,8 +347,8 @@ export const controller = createQuestTools({
     return {
       find: true,
       open: true,
-      check: open ? true : { locked: 'Unlocks when a quest is open.' },
-      submit: s.workspace === 'checked' ? true : { locked: 'Unlocks after check-contribution passes.' },
+      check: open ? true : { locked: 'Opens when a quest is open.' },
+      submit: s.workspace === 'checked' ? true : { locked: 'Opens after the check passes.' },
     };
   },
 

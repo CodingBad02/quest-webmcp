@@ -1,7 +1,7 @@
 import type { ConfirmContent, ConfirmFn, ConfirmOutcome } from '../types.ts';
 
 const COPY = {
-  review: { title: 'Send this to a reviewer?', body: 'A person checks this before it changes anything public. You can edit it again if it\'s sent back.', confirm: 'Send for review' },
+  review: { title: 'Send this for review?', body: 'A person reads it before anything changes in public. If it comes back, you can edit it.', confirm: 'Send' },
   public: { title: 'Publish this change?', body: 'This writes to the public record now, under your account. A new edit can correct it later; nothing here can be quietly undone.', confirm: 'Publish' },
 };
 
@@ -33,7 +33,7 @@ export function createDialogConfirm(root: () => HTMLElement = () => document.bod
     const h = document.createElement('h2'); h.className = 'qt-confirm-title'; h.id = 'qt-confirm-title'; h.textContent = copy.title;
     const body = document.createElement('p'); body.className = 'qt-confirm-body'; body.textContent = copy.body;
     const note = document.createElement('p'); note.className = 'qt-confirm-note';
-    note.textContent = `This closes on its own if you wait ${Math.round(timeoutMs / 1000)} seconds. Nothing is sent until you choose.`;
+    note.textContent = `Nothing is sent until you choose. This closes after ${Math.round(timeoutMs / 1000)} seconds.`;
     const actions = document.createElement('div'); actions.className = 'qt-confirm-actions';
     const keep = document.createElement('button'); keep.className = 'qt-btn'; keep.type = 'button'; keep.value = 'cancel'; keep.textContent = 'Keep editing';
     const go = document.createElement('button'); go.className = 'qt-btn qt-btn-primary'; go.type = 'button'; go.value = 'confirm'; go.textContent = copy.confirm;
