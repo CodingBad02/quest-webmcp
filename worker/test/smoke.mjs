@@ -25,13 +25,13 @@ assert.equal(r.status, 201); assert.equal(r.data.state, 'open');
 r = await api('PUT', `/contributions/${id}`, { body: { state: 'submitted' }, session: rev });
 assert.equal(r.status, 403, 'another session cannot write my draft');
 
-r = await api('POST', '/handoffs', { body: { contributionId: id, targetOrigin: 'http://localhost:8787', ttlSeconds: 60 }, session: vol });
+r = await api('POST', '/handoffs', { body: { contributionId: id, targetOrigin: BASE, ttlSeconds: 60 }, session: vol });
 assert.equal(r.status, 201); const token = r.data.handoff; assert.ok(token.length > 20);
 
 r = await api('POST', '/handoffs/exchange', { body: { handoff: token }, origin: 'https://evil.example' });
 assert.equal(r.status, 403, 'wrong origin cannot exchange');
 
-r = await api('POST', '/handoffs/exchange', { body: { handoff: token }, origin: 'http://localhost:8787' });
+r = await api('POST', '/handoffs/exchange', { body: { handoff: token }, origin: BASE });
 assert.equal(r.status, 200); assert.equal(r.data.contribution.id, id);
 assert.equal(r.data.contribution.ownerSession, undefined, 'the credential never leaves the store');
 const grant = r.data.grant; assert.ok(grant && grant !== vol, 'exchange mints a scoped grant, not the owner session');
@@ -41,7 +41,7 @@ assert.equal(r.status, 200, 'the grant can write this contribution');
 r = await api('PUT', `/contributions/c_other_${id}`, { body: { quest, volunteerName: 'X' }, session: grant });
 assert.equal(r.status, 403, 'the grant cannot create another contribution');
 
-r = await api('POST', '/handoffs/exchange', { body: { handoff: token }, origin: 'http://localhost:8787' });
+r = await api('POST', '/handoffs/exchange', { body: { handoff: token }, origin: BASE });
 assert.equal(r.status, 410, 'a handoff is single use');
 
 r = await api('PUT', `/contributions/${id}`, { body: { state: 'submitted', payload: { wheelchair: 'yes' }, via: 'http://localhost:8787' }, session: vol });
@@ -63,9 +63,9 @@ assert.equal(r.status, 200); assert.equal(r.data.state, 'approved'); assert.equa
 r = await api('PUT', `/contributions/${id}`, { body: { state: 'open' }, session: vol });
 assert.equal(r.status, 409, 'an approved contribution cannot be reopened');
 
-r = await api('POST', '/handoffs', { body: { contributionId: id, targetOrigin: 'http://localhost:8787', action: 'stage' }, session: rev });
+r = await api('POST', '/handoffs', { body: { contributionId: id, targetOrigin: BASE, action: 'stage' }, session: rev });
 assert.equal(r.status, 201, 'a reviewer can mint a stage handoff for an approved contribution');
-r = await api('POST', '/handoffs/exchange', { body: { handoff: r.data.handoff }, origin: 'http://localhost:8787' });
+r = await api('POST', '/handoffs/exchange', { body: { handoff: r.data.handoff }, origin: BASE });
 assert.equal(r.status, 200); assert.equal(r.data.action, 'stage'); assert.equal(r.data.grant, undefined, 'stage grants no write capability');
 
 r = await fetch(`${BASE}/api/urlcheck?url=${encodeURIComponent('https://en.wikipedia.org/wiki/Bengaluru')}`).then((x) => x.json());

@@ -72,14 +72,14 @@ Open `/?role=reviewer` in a second tab to review. The reviewer tab uses a separa
 
 ```
 npm run test:contract          # package: names, budgets, registration by state, envelope, confirm order, cancellation
-node worker/test/smoke.mjs     # store: ownership, handoff origin/single-use/expiry, self-review
+node worker/test/smoke.mjs [url]   # store: ownership, grants, handoff origin/single-use/expiry, self-review, url checks; default http://localhost:8787
 npm run build && npm run build:survey
 npx vite preview --port 4173 & npm run test:e2e   # real Chrome, WebMCP on, the whole loop through document.modelContext
 ```
 
 ## Deploy
 
-Quest is live at https://gatherlight.netlify.app (Netlify, `netlify.toml`). In Netlify → Site configuration → Environment variables, set `VITE_STORE_URL` and `VITE_SURVEY_URL` to the Worker's URL so the build points at your store. GitHub Pages also works (`.github/workflows/pages.yml`, repository variables `STORE_URL` and `SURVEY_URL`).
+Quest is live at https://gatherlight.netlify.app (Netlify, `netlify.toml`). The store and Survey are live at https://quest-store.quest-store.workers.dev. In Netlify → Site configuration → Environment variables, `VITE_STORE_URL` = `https://quest-store.quest-store.workers.dev` and `VITE_SURVEY_URL` = `https://quest-store.quest-store.workers.dev/` point the build at the store. GitHub Pages also works (`.github/workflows/pages.yml`, repository variables `STORE_URL` and `SURVEY_URL`).
 
 The store and Survey deploy as one Worker: `.github/workflows/worker.yml` on push, with secret `CLOUDFLARE_API_TOKEN` and variable `QUEST_URL` (`https://gatherlight.netlify.app/`). By hand:
 
