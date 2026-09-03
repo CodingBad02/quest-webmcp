@@ -2,8 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { toast as sonnerToast } from 'sonner';
 import type { StoredContribution } from '../../worker/src/client.ts';
 import { store } from './storeClient';
-import { buildCampaigns, clearOverpassCache, loadQuests } from '../data/overpass';
-import { buildWikidataCampaigns, clearWikidataCache, loadWikidataQuests } from '../data/wikidata';
+import { buildCampaigns, loadQuests } from '../data/overpass';
+import { buildWikidataCampaigns, loadWikidataQuests } from '../data/wikidata';
 import { DEFAULT_PLACE, type AppState, type Contribution, type ContributionPayload, type Place, type Quest, type QuestType, type WorkspaceState } from '../types';
 
 const KEY = 'quest.state.v1';
@@ -83,16 +83,12 @@ function campaignsFor(quests: Quest[], place: Place, contributions: Contribution
   };
 }
 
-/** Changing the place drops the volunteer back to browsing, frees the old place's caches, and
- *  reloads quests around the new one. */
+/** Changing the place drops the volunteer back to browsing and reloads quests around it. */
 export async function setPlace(place: Place) {
-  const old = state.profile.place;
   setState({
     profile: { ...state.profile, place },
     activeQuestId: null, draft: null, workspace: 'browsing', checkErrors: [], checkTitle: null, handoff: null,
   });
-  clearOverpassCache(old);
-  clearWikidataCache(old);
   await reloadQuests();
 }
 

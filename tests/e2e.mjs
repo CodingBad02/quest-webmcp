@@ -150,7 +150,7 @@ await vol.screenshot({ path: `${SHOTS}/07-approved.png` });
 // not just the old fixed key, or a cached Bengaluru fetch from an earlier page would mask this.
 const clearOverpassCache = () => { for (const k of Object.keys(localStorage)) if (k.startsWith('quest.overpass.v1')) localStorage.removeItem(k); };
 const off = await ctx.newPage();
-await off.route('**overpass-api.de/**', (r) => r.abort());
+await off.route(/overpass(?:-api\.de|\.kumi\.systems)/, (r) => r.abort());
 await off.evaluate(clearOverpassCache).catch(() => {});
 await off.goto(BASE);
 await off.evaluate(clearOverpassCache);
@@ -159,6 +159,37 @@ await off.waitForSelector('.cards .card', { timeout: 20000 });
 const src = await off.$eval('.pill[title="Where quests come from"]', (e) => e.textContent);
 check('9. Overpass blocked: quests load from the offline copy', /offline/.test(src), src);
 await off.close();
+
+const offKoramangala = await ctx.newPage();
+await offKoramangala.route(/overpass(?:-api\.de|\.kumi\.systems)/, (r) => r.abort());
+await offKoramangala.route('**query.wikidata.org/**', (r) => r.abort());
+await offKoramangala.goto(BASE);
+await offKoramangala.evaluate(() => {
+  localStorage.setItem('quest.state.v1', JSON.stringify({ profile: { place: { label: 'Koramangala Police Station, Karnataka', lat: 12.9411249, lon: 77.6214094 } } }));
+  for (const k of Object.keys(localStorage)) if (k.startsWith('quest.overpass.v1')) localStorage.removeItem(k);
+});
+await offKoramangala.reload();
+await offKoramangala.getByRole('radio', { name: 'Visit' }).click();
+await offKoramangala.waitForSelector('.cards .card', { timeout: 15000 });
+const koramangalaSource = await offKoramangala.$eval('.pill[title="Where quests come from"]', (e) => e.textContent);
+const koramangalaVisits = await offKoramangala.$$eval('.cards .card', (els) => els.length);
+check('9b. Overpass blocked: Koramangala still has visit quests from its offline copy', /offline/.test(koramangalaSource) && koramangalaVisits > 0, `${koramangalaSource}; visits=${koramangalaVisits}`);
+await offKoramangala.close();
+
+const offUnknown = await ctx.newPage();
+await offUnknown.route(/overpass(?:-api\.de|\.kumi\.systems)/, (r) => r.abort());
+await offUnknown.route('**query.wikidata.org/**', (r) => r.abort());
+await offUnknown.goto(BASE);
+await offUnknown.evaluate(() => {
+  localStorage.setItem('quest.state.v1', JSON.stringify({ profile: { place: { label: 'Mysuru, Karnataka', lat: 12.2958, lon: 76.6394 } } }));
+});
+await offUnknown.reload();
+await offUnknown.getByRole('radio', { name: 'Visit' }).click();
+await offUnknown.waitForSelector('.empty');
+const unavailableFind = await call(offUnknown, 'find-quests', { type: 'access-photo' });
+const unavailableText = await offUnknown.$eval('.empty', (e) => e.textContent);
+check('9c. No fallback: UI offers retry and find-quests preserves the requested constraints', /OpenStreetMap is unavailable/.test(unavailableText) && /Try again/.test(unavailableText) && envelope(unavailableFind).state === 'invalid' && /Keep the same constraints/.test(unavailableFind), unavailableFind.split('\n')[0]);
+await offUnknown.close();
 
 // ---------- Cross-site proof: Quest -> Survey -> Quest (SPEC.md P0 Cross-site proof) ----------
 

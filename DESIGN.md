@@ -266,7 +266,7 @@ The countdown is real and ticks down in `--qt-font-mono`, tabular figures — un
 |---|---|
 | WebMCP present, runtime identifiable | `Agent: Chrome 153` |
 | WebMCP present, runtime unclear | `Agent: detected` |
-| WebMCP absent | `No agent connected. Click the buttons instead.` |
+| WebMCP absent | `Site tools unavailable. Enable them, then reload. Buttons still work.` |
 
 All three render in the same neutral pill style (`--qt-color-text-muted` on `--qt-color-surface-2`, no border-color signaling). Manual mode is not a degraded state; it does not get a warning color.
 

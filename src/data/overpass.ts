@@ -1,11 +1,22 @@
 import { isDefaultPlace, type Campaign, type Place, type Quest, type QuestType } from '../types';
 import fallback from './fallbackOverpass.json';
+import koramangalaFallback from './fallbackKoramangala.json';
 
 // Public Overpass instances, tried in order. The main one returns 504 under load.
 const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 const CACHE_PREFIX = 'quest.overpass.v1';
 const TTL = 24 * 3600 * 1000;
+const REQUEST_TIMEOUT_MS = 5_000;
 const AMENITIES = '^(pharmacy|clinic|library|community_centre|cafe|toilets|bank|post_office)$';
+
+/** The snapshot covers Koramangala and the police-station result used by the demo prompt. */
+function bundledFallback(place: Place): Response | null {
+  if (isDefaultPlace(place)) return fallback as unknown as Response;
+  if (place.lat >= 12.930 && place.lat <= 12.942 && place.lon >= 77.618 && place.lon <= 77.630) {
+    return koramangalaFallback as unknown as Response;
+  }
+  return null;
+}
 
 /** Cache key includes the place rounded to 3 decimals, so each place keeps its own 24h cache. */
 function cacheKey(place: Place) { return `${CACHE_PREFIX}:${place.lat.toFixed(3)},${place.lon.toFixed(3)}`; }
@@ -80,14 +91,15 @@ export function buildCampaigns(quests: Quest[], place: Place, contributedQuestId
   ];
 }
 
-/** The bundled fallback JSON is only honest for the default place; anywhere else, a failed live
- *  query yields an empty list and App.tsx's source pill names the unreachable place. */
-export async function loadQuests(place: Place): Promise<{ quests: Quest[]; source: 'live' | 'cached' | 'fallback' }> {
+/** Prefer fresh cached or live data, then stale cached data, then an honest bundled snapshot. */
+export async function loadQuests(place: Place): Promise<{ quests: Quest[]; source: 'live' | 'cached' | 'fallback' | 'unavailable' }> {
   const key = cacheKey(place);
+  let cached: Response | null = null;
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
       const c = JSON.parse(raw) as { at: number; res: Response };
+      cached = c.res;
       if (Date.now() - c.at < TTL) return { quests: elementsToQuests(c.res), source: 'cached' };
     }
   } catch { /* fall through */ }
@@ -95,7 +107,7 @@ export async function loadQuests(place: Place): Promise<{ quests: Quest[]; sourc
     let r: globalThis.Response | null = null;
     for (const endpoint of ENDPOINTS) {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 12_000);
+      const t = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
       try {
         const attempt = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query(place.lat, place.lon)), signal: ctrl.signal });
         if (attempt.ok) { r = attempt; break; }
@@ -107,7 +119,9 @@ export async function loadQuests(place: Place): Promise<{ quests: Quest[]; sourc
     try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), res })); } catch { /* ignore */ }
     return { quests: elementsToQuests(res), source: 'live' };
   } catch {
-    if (isDefaultPlace(place)) return { quests: elementsToQuests(fallback as unknown as Response), source: 'fallback' };
-    return { quests: [], source: 'fallback' };
+    if (cached?.elements?.length) return { quests: elementsToQuests(cached), source: 'cached' };
+    const bundled = bundledFallback(place);
+    if (bundled) return { quests: elementsToQuests(bundled), source: 'fallback' };
+    return { quests: [], source: 'unavailable' };
   }
 }

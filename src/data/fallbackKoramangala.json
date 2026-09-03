@@ -1,0 +1,221 @@
+{
+  "version": 0.6,
+  "generator": "OpenStreetMap API 0.6",
+  "osm3s": {
+    "timestamp_osm_base": "2026-09-03T17:40:00Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 303933809,
+      "version": 10,
+      "lat": 12.9365346,
+      "lon": 77.627846,
+      "tags": {
+        "amenity": "bank",
+        "brand": "State Bank of India",
+        "name": "State Bank of India",
+        "name:kn": "ಭಾರತೀಯ ಸ್ಟೇಟ್ ಬ್ಯಾಂಕ್"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1464784180,
+      "version": 8,
+      "lat": 12.9344222,
+      "lon": 77.6240149,
+      "tags": {
+        "addr:street": "Koramangala, Bangalore",
+        "amenity": "bank",
+        "name": "Canara Bank",
+        "name:kn": "ಕೆನರಾ ಬ್ಯಾಂಕ್"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1464885140,
+      "version": 3,
+      "lat": 12.9373048,
+      "lon": 77.6244506,
+      "tags": {
+        "addr:postcode": "560095",
+        "addr:street": "17th B Main, 6th Block",
+        "amenity": "pharmacy",
+        "healthcare": "pharmacy",
+        "name": "Apollo Pharmacy"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1473308076,
+      "version": 2,
+      "lat": 12.9377532,
+      "lon": 77.6266479,
+      "tags": {
+        "amenity": "pharmacy",
+        "healthcare": "pharmacy",
+        "name": "Himalaya Health care - druggists"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1474324439,
+      "version": 1,
+      "lat": 12.9367494,
+      "lon": 77.6200067,
+      "tags": {
+        "amenity": "cafe",
+        "cuisine": "coffee_shop",
+        "name": "Coffee Lounge"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4445505534,
+      "version": 3,
+      "lat": 12.9366734,
+      "lon": 77.6228961,
+      "tags": {
+        "addr:city": "Bangalore",
+        "addr:housenumber": "69",
+        "addr:postcode": "560095",
+        "addr:street": "17th E Main Road",
+        "addr:suburb": "Koramangala",
+        "amenity": "clinic",
+        "healthcare": "clinic",
+        "name": "Koramangala Poly Clinic"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4772969935,
+      "version": 2,
+      "lat": 12.9320032,
+      "lon": 77.6229997,
+      "tags": {
+        "amenity": "clinic",
+        "healthcare": "clinic",
+        "name": "Vachani Vista"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5036138595,
+      "version": 1,
+      "lat": 12.9334968,
+      "lon": 77.6212815,
+      "tags": {
+        "amenity": "cafe",
+        "name": "Java City"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6939350511,
+      "version": 2,
+      "lat": 12.9314314,
+      "lon": 77.6233582,
+      "tags": {
+        "addr:postcode": "560034",
+        "amenity": "clinic",
+        "healthcare": "clinic",
+        "name": "Kamala Nethralaya"
+      }
+    },
+    {
+      "type": "node",
+      "id": 9954120118,
+      "version": 1,
+      "lat": 12.9391694,
+      "lon": 77.6283469,
+      "tags": {
+        "amenity": "cafe",
+        "name": "Chubby Chai"
+      }
+    },
+    {
+      "type": "node",
+      "id": 10728008696,
+      "version": 1,
+      "lat": 12.9333868,
+      "lon": 77.6223524,
+      "tags": {
+        "amenity": "cafe",
+        "name": "The Tea Toast Co.",
+        "takeaway": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 11117270552,
+      "version": 3,
+      "lat": 12.937942,
+      "lon": 77.6262087,
+      "tags": {
+        "amenity": "cafe",
+        "delivery": "yes",
+        "name": "Glen's Bakehouse",
+        "takeaway": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 11385580177,
+      "version": 1,
+      "lat": 12.9374519,
+      "lon": 77.6265817,
+      "tags": {
+        "amenity": "pharmacy",
+        "check_date": "2023-11-30",
+        "healthcare": "pharmacy",
+        "name": "Lavish Pharma"
+      }
+    },
+    {
+      "type": "node",
+      "id": 12043260297,
+      "version": 1,
+      "lat": 12.9361524,
+      "lon": 77.6285782,
+      "tags": {
+        "addr:city": "Bengaluru",
+        "addr:housenumber": "418/4",
+        "addr:postcode": "560034",
+        "addr:street": "80 Feet Road",
+        "amenity": "post_office",
+        "brand": "Blue Dart",
+        "name": "Blue Dart Express Limited"
+      }
+    },
+    {
+      "type": "node",
+      "id": 12395928081,
+      "version": 1,
+      "lat": 12.9350501,
+      "lon": 77.6250594,
+      "tags": {
+        "addr:city": "Bengaluru",
+        "addr:housenumber": "39",
+        "addr:street": "8th Main Road",
+        "addr:suburb": "Koramangala",
+        "amenity": "cafe",
+        "cuisine": "coffee_shop",
+        "name": "Fast Coffee"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13057726125,
+      "version": 1,
+      "lat": 12.9359805,
+      "lon": 77.6250264,
+      "tags": {
+        "amenity": "bank",
+        "brand": "Bank of Baroda",
+        "check_date": "2025-08-08",
+        "name": "Bank of Baroda"
+      }
+    }
+  ]
+}

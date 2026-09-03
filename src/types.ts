@@ -119,7 +119,7 @@ export interface AppState {
   draft: ContributionPayload | null;
   workspace: WorkspaceState;
   role: 'volunteer' | 'reviewer';
-  questSource: 'live' | 'cached' | 'fallback' | 'loading';
+  questSource: 'live' | 'cached' | 'fallback' | 'unavailable' | 'loading';
   checkErrors: string[];
   /** cite-claim only: the fetched page title of the checked source, shown under the field. */
   checkTitle: string | null;

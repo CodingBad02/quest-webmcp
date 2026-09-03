@@ -198,8 +198,15 @@ export const controller = createQuestTools({
         controller.refresh();
       }
       const list = findQuestsImpl(args);
-      const label = getState().profile.place.label;
-      if (!list.length) return result('available', `No quests fit near ${label}. Try more minutes, or allow in-person quests.`);
+      const state = getState();
+      const label = state.profile.place.label;
+      if (!list.length && state.questSource === 'loading') {
+        return result('available', `Quests near ${label} are still loading. Call find-quests again in a few seconds with the same constraints.`);
+      }
+      if (!list.length && state.questSource === 'unavailable' && args.type !== 'cite-claim') {
+        return result('invalid', `OpenStreetMap is unavailable for ${label}, and no local OSM data covers this place. Keep the same constraints and ask the volunteer to retry.`);
+      }
+      if (!list.length) return result('available', `No quests fit near ${label}. Keep the requested quest type; try more minutes only if the volunteer agrees.`);
       return result('available', `Found ${list.length} quests near ${label}:\n${list.map(fmtQuest).join('\n')}`);
     },
 
@@ -364,7 +371,7 @@ export const controller = createQuestTools({
       properties: {
         minutesAvailable: { type: 'number', description: 'Minutes the volunteer has right now' },
         skills: { type: 'array', items: { type: 'string' }, description: 'What the volunteer can do, e.g. phone, photo, visit' },
-        type: { type: 'string', description: 'Limit to one quest type' },
+        type: { type: 'string', enum: ['verify-hours', 'access-photo', 'cite-claim'], description: 'Use access-photo for step-free entrances; verify-hours for calls; cite-claim for research' },
         remoteOnly: { type: 'boolean', description: 'Only quests that can be done from home' },
         near: { type: 'string', description: 'A place to search around, e.g. "Koramangala, Bengaluru"' },
       },

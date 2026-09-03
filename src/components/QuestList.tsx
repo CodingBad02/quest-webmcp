@@ -1,12 +1,13 @@
 import { useState, type JSX } from 'react';
 import { ChevronDown, Phone, Quote, DoorOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useAppState } from '../state/store';
+import { reloadQuests, useAppState } from '../state/store';
 import { controller, findQuestsImpl } from '../webmcp/tools';
-import { isDefaultPlace, type Quest, type QuestType } from '../types';
+import type { Quest, QuestType } from '../types';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { StateChip } from './StateChip';
 
@@ -33,7 +34,7 @@ function Card({ q }: { q: Quest }) {
   );
 }
 
-const SOURCE_LABEL = { loading: 'Loading', live: 'Live OpenStreetMap', cached: 'OpenStreetMap, cached', fallback: 'OpenStreetMap, offline copy' } as const;
+const SOURCE_LABEL = { loading: 'Loading', live: 'Live OpenStreetMap', cached: 'OpenStreetMap, cached', fallback: 'OpenStreetMap, offline copy', unavailable: 'OpenStreetMap unavailable' } as const;
 
 export function QuestList() {
   const quests = useAppState((s) => s.quests);
@@ -48,7 +49,8 @@ export function QuestList() {
   const sourcesOpen = openSources || mine.at(-1)?.payload.kind === 'cite-claim';
   const claimIds = new Set(wdCampaigns.flatMap((c) => c.questIds));
   const sourced = contributions.filter((c) => claimIds.has(c.questId) && (c.status === 'approved' || c.status === 'landed')).length;
-  const provenance = source === 'fallback' && !isDefaultPlace(profile.place) ? `OpenStreetMap unreachable for ${profile.place.label}` : SOURCE_LABEL[source];
+  const provenance = SOURCE_LABEL[source];
+  const osmUnavailable = source === 'unavailable' && type !== 'cite-claim';
 
   return (
     <div id="quests" className="questlist scroll-mt-6">
@@ -70,7 +72,10 @@ export function QuestList() {
           ))}
         </ul>
       ) : matches.length === 0 ? (
-        <div className="empty rounded-xl border border-dashed border-border bg-card/70 px-7 py-10 text-center text-muted-foreground">Nothing fits yet. Add minutes or widen the filter.</div>
+        <div className="empty rounded-xl border border-dashed border-border bg-card/70 px-7 py-10 text-center text-muted-foreground">
+          <p>{osmUnavailable ? `OpenStreetMap is unavailable for ${profile.place.label}.` : 'Nothing fits the current time and filter.'}</p>
+          {osmUnavailable && <Button variant="outline" size="sm" className="mt-4" onClick={() => { void reloadQuests(); }}>Try again</Button>}
+        </div>
       ) : (
         <ul className="cards overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-card)">{matches.map((q) => <Card key={q.id} q={q} />)}</ul>
       )}

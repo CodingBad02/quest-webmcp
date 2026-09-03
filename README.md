@@ -98,9 +98,9 @@ Survey needs a build to be served by the store: `npm run build:survey`. Survey's
 Open Quest in a WebMCP runtime:
 
 - Chrome 149 or newer: enable `chrome://flags/#enable-webmcp-testing` and relaunch, or launch with `--enable-features=WebMCP`.
-- ChatGPT desktop app browser: WebMCP is on by default.
+- ChatGPT desktop app browser: use GPT-5.6 Sol or Terra and enable Site tools under Browser permissions.
 
-Without WebMCP everything runs in manual mode. The rack says `No agent connected. Click the buttons instead.`
+Without WebMCP everything runs in manual mode. The rack explains how to enable Site tools; the buttons still work.
 
 Open `/?role=reviewer` in a second tab to review. The reviewer tab uses a separate anonymous session so the two-tab demo works in one browser. This is a demo compromise: one browser can approve its own work. Reviewer sign-in by OpenStreetMap or Wikimedia is next.
 

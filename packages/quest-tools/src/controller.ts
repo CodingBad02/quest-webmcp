@@ -52,7 +52,7 @@ const NEW_SETTLES_MS = 1400;
 const REMOVE_AFTER_MS = 500;
 
 export function runtimeDescription(present: boolean): string {
-  if (!present) return 'No agent connected. Click the buttons instead.';
+  if (!present) return 'Site tools unavailable. Enable them, then reload. Buttons still work.';
   const chrome = typeof navigator !== 'undefined' ? navigator.userAgent.match(/Chrome\/(\d+)/) : null;
   return chrome ? `Agent: Chrome ${chrome[1]}` : 'Agent: detected';
 }
