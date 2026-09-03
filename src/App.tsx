@@ -10,6 +10,7 @@ import { QuestList } from './components/QuestList';
 import { Workspace } from './components/Workspace';
 import { ReviewerQueue } from './components/ReviewerQueue';
 import { Sky } from './components/Sky';
+import { LogoCloud } from './components/LogoCloud';
 
 export default function App() {
   const role = useAppState((s) => s.role);
@@ -61,6 +62,7 @@ export default function App() {
       </header>
 
       <Sky size={hero ? 'hero' : 'band'} />
+      {hero && <LogoCloud />}
 
       <main className="layout grid w-full flex-1 grid-cols-[minmax(680px,760px)_320px] items-start justify-center gap-6 px-6 pt-9 pb-18 max-xl:grid-cols-[minmax(560px,1fr)_280px] max-md:grid-cols-1 max-md:px-4 max-md:pt-6 max-md:pb-12">
         <section className="work min-w-0" aria-live="polite">
