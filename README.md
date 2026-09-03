@@ -82,7 +82,7 @@ npx vite preview --port 4173 & npm run test:e2e   # real Chrome, WebMCP on, the 
 npm run test:live [questUrl] [storeUrl]   # deployed endpoints: Quest, Survey, store CORS/origin rules, url check; defaults to the live URLs
 ```
 
-Before a push, the diff gets an independent review from [OpenAI Codex](https://github.com/codex) (`codex review`, read-only sandbox). Blockers are fixed before the commit; the commit trailer records the review.
+Before a push, the diff gets an independent review from [OpenAI Codex](https://github.com/openai/codex) (`codex review`, read-only sandbox). Blockers are fixed before the commit; the commit trailer records the review.
 
 ## Deploy
 
